@@ -1,0 +1,13 @@
+# Main compose file for ROS-master with the container from Dockerhub.
+version: '3'
+
+services:
+  brain:
+    image: windesheimwinny/brain:latest
+    networks:
+      - ros
+    restart: always
+
+networks:
+  ros:
+    driver: bridge
