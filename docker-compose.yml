@@ -1,5 +1,5 @@
 # Main compose file for ROS-master with the container from Dockerhub.
-version: '3'
+version: '2.1'
 
 services:
   brain:
