@@ -1,6 +1,0 @@
-# Override compose file for ROS-master with local build of the container.
-version: '2.1'
-
-services:
-  brain:
-    build: ./docker
