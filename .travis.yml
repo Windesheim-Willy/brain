@@ -1,9 +1,0 @@
-sudo: required
-
-language: ruby
-
-services:
-  - docker
-
-script:
-  - docker-compose -f docker-compose.yml -f docker-compose.build.yml build
