@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+start)
+  ;;
+stop)
+  ;;
+restart)
+  $0 stop
+  $0 start
+  ;;
+status)
+  if [ -e /var/run/brain.pid ]; then
+    echo brain is running, pid=`cat /var/run/brain.pid`
+  else
+    echo ros_master is NOT running
+    exit 1
+  fi
+  ;;
+*)
+  echo "Usage: $0 {start|stop|status|restart}"
+esac
+
+exit 0
