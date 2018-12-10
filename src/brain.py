@@ -12,6 +12,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 ########################## Methods ############################ 
 
+# Interrupt event for commanding the brain
 def ExecuteCommand(msg):
     commandValue = int(msg.data)
     if commandValue == 1:
@@ -20,10 +21,12 @@ def ExecuteCommand(msg):
         if result:
             rospy.loginfo("Goal execution done!")
 
+# Picks a random location out of the apriltag dictionary
 def GetRandomLocation():
     index = random.randint(0,len(tagLocations)-1)
     return tagLocations.values()[index]
 
+# Create a MoveBaseGoal with a random location
 def GetRandomGoal():
     location = GetRandomLocation()
     goal = MoveBaseGoal()
@@ -39,13 +42,14 @@ def GetRandomGoal():
 	
     return goal
 
-
+# Publish a random goal on the move_base/goal topic
 def SetRandomGoalTopic():
     goal = GetRandomGoal()
 
     goalTopic.publish(goal)
     print(goal)
 
+# Publish a random goal as action with feedback form the navigation server
 def SetRandomGoalAction():
     client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
 
@@ -98,7 +102,7 @@ tagLocations = {
 528:(43.65193339638883, 60.123809610098775, 0.0)
 }
 
-
+# Heartbeat for this wonderfull brain
 while not rospy.is_shutdown():
 	print(commandValue)
 	sleep(0.5)
