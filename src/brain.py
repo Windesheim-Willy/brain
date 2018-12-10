@@ -49,7 +49,7 @@ def SetRandomGoalTopic():
     goalTopic.publish(goal)
     print(goal)
 
-# Publish a random goal as action with feedback form the navigation server
+# Publish a random goal as action with feedback from the navigation server
 def SetRandomGoalAction():
     client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
 
