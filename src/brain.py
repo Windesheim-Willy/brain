@@ -7,7 +7,7 @@ import random
 import actionlib
 from time import sleep
 from std_msgs.msg import String, Int32
-from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 STATE_AUTONOMOUS = 0
@@ -21,10 +21,14 @@ STATE_MOVE_TO_TAG = 4
 # Handler while in STATE_AUTONOMOUS
 def HandleStateAutonomous():
     print("Willy is autonomous driving!")
+    #TODO if willy has goal
+    #TODO if false -> set random goal
+    #TODO proxy cmdvel from move_base to motor driver cmdvel
 
 # Handler while in STATE_EMERGENCY
 def HandlerStateEmergency():
     print("Willy is in a state of emergency")
+    #TODO keep sending stop messages to cmdvel
 
 # Handler while in STATE_HUMAN_CONTROL
 def HandlerStateHumanControl():
@@ -40,13 +44,10 @@ def HandleSocialInteraction():
 # Handler while in STATE_MOVE_TO_TAG
 def HandleMoveToTag():
     print("Willy is moving to a specific location")
-    #TODO check if a goal is set
-    #TODO   if not set a goal 
-    #TODO
     #TODO Check if robot it near goal
     #TODO    if it is -> cancle the goal + change state to STATE_AUTONOMOUS
-    #TODO
-    #TODO get cmdvel from move_base and proxy it to the motor controller
+    #TODO otherwise
+    #TODO   get cmdvel from move_base and proxy it to the motor controller
 
 # This function is called when willy transitions from one state to another
 def HandleTransition(currentState, newState):
@@ -108,6 +109,8 @@ def SetRandomGoalAction():
     else:
         return client.get_result()
 
+def JoystickInputCommand(msg):
+    print("Got joystick input")
 
 ###############################################################
 
@@ -115,6 +118,7 @@ def SetRandomGoalAction():
 # Init ROS components
 rospy.init_node('topic_publisher')
 commandTopic = rospy.Subscriber("brain_command", Int32, ExecuteCommand);
+joystickTopic = rospy.Subscriber("cmd_vel", Twist, JoystickInputCommand);
 goalTopic = rospy.Publisher("move_base/goal", MoveBaseGoal, queue_size=25)
 
 # Init global components
