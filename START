@@ -1,25 +1,11 @@
 #!/bin/bash
-set -e
+echo start script
+echo export URI
+export ROS_MASTER_URI=http://brainnode:11311
+echo start roscore
+roscore >/dev/null 2>&1 &
+echo start discovery
+rosrun master_discovery_fkie master_discovery >/dev/null 2>&1 &
+echo start sync
+rosrun master_sync_fkie master_sync >/dev/null 2>&1 &
 
-case "$1" in
-start)
-  ;;
-stop)
-  ;;
-restart)
-  $0 stop
-  $0 start
-  ;;
-status)
-  if [ -e /var/run/brain.pid ]; then
-    echo brain is running, pid=`cat /var/run/brain.pid`
-  else
-    echo ros_master is NOT running
-    exit 1
-  fi
-  ;;
-*)
-  echo "Usage: $0 {start|stop|status|restart}"
-esac
-
-exit 0
