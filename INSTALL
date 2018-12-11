@@ -1,10 +1,28 @@
-#!/bin/bash
-set -e
+# Install multimaster as decribed in 
+sudo apt-get install ros-kinetic-multimaster-fkie
 
-COMPONENTDIR=$(pwd)
+# Enable multicast feature on both hosts and for all ROS nodes:
+# edit the /etc/sysctl.conf file and add the following line:
+net.ipv4.icmp_echo_ignore_broadcasts=0
 
-# Make sure only root can run our script
-if [ "$(id -u)" != "0" ]; then
-   echo "This script must be run as root" 1>&2
-   exit 1
-fi
+# create new file in /etc/systemd/system/multimaster.service:
+
+[Unit]
+After=NetworkManager.service time-sync.target
+[Service]
+Type=forking
+User=ubuntu
+# Start roscore as a fork and then wait for the tcp port to be opened
+# ----------------------------------------------------------------
+# Source all the environment variables, start roscore in a fork
+# Since the service type is forking, systemd doesn't mark it as
+# 'started' until the original process exits, so we have the
+# non-forked shell wait until it can connect to the tcp opened by
+# roscore, and then exit, preventing conflicts with dependant services
+ExecStart=/bin/sh -c ". /opt/ros/kinetic/setup.sh; . /etc/ubiquity/env.sh; roscore & while ! echo exit | nc localhost 11311 > /dev/null; do sleep 1; . /home/ubuntu/mm.sh; done"
+# Added to startup multimaster
+[Install]
+WantedBy=multi-user.target
+
+# enable autstart with sudo systemctl enable multimaster.service
+
