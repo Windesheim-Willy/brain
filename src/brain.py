@@ -8,7 +8,8 @@ import actionlib
 from time import sleep
 from std_msgs.msg import String, Int32
 from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionGoal
+from actionlib_msgs.msg import GoalID
 
 STATE_AUTONOMOUS = 0
 STATE_EMERGENCY = 1
@@ -87,10 +88,9 @@ def UpdateState():
 def ExecuteCommand(msg):
     commandValue = int(msg.data)
     if commandValue == 1:
-	SetRandomGoalTopic()
- 	result = SetRandomGoalAction()
-        if result:
-            rospy.loginfo("Goal execution done!")
+	SetRandomGoal()
+    if commandValue == 2:
+	CancelGoals()
 
 # Picks a random location out of the apriltag dictionary
 def GetRandomLocation():
@@ -100,25 +100,41 @@ def GetRandomLocation():
 # Create a MoveBaseGoal with a random location
 def GetRandomGoal():
     location = GetRandomLocation()
-    goal = MoveBaseGoal()
+    goal = MoveBaseActionGoal()
 
-    goal.target_pose.header.seq = 0
-    goal.target_pose.header.frame_id = "map" 
-    goal.target_pose.header.stamp.secs = rospy.get_rostime().secs 
-    goal.target_pose.header.stamp.nsecs = rospy.get_rostime().nsecs
-    goal.target_pose.pose.position.x = location[0]
-    goal.target_pose.pose.position.y = location[1] 
-    goal.target_pose.pose.position.z = 0.0
-    goal.target_pose.pose.orientation.w = 1.0
+    goal.header.seq = 0
+    goal.header.frame_id = "map" 
+    goal.header.stamp.secs = rospy.get_rostime().secs 
+    goal.header.stamp.nsecs = rospy.get_rostime().nsecs
+    goal.goal_id.stamp = rospy.get_rostime()
+    goal.goal_id.id = "goal" 
+    goal.goal.target_pose.header.seq = 0
+    goal.goal.target_pose.header.stamp.secs = rospy.get_rostime().secs 
+    goal.goal.target_pose.header.stamp.nsecs = rospy.get_rostime().nsecs
+    goal.goal.target_pose.header.frame_id = "map"
+    goal.goal.target_pose.pose.position.x = location[0]
+    goal.goal.target_pose.pose.position.y = location[1] 
+    goal.goal.target_pose.pose.position.z = 0.0
+    goal.goal.target_pose.pose.orientation.w = 1.0
 	
     return goal
 
-# Publish a random goal on the move_base/goal topic
-def SetRandomGoalTopic():
-    goal = GetRandomGoal()
+# Publish a random goal
+def SetRandomGoal():
+    SetGoal(GetRandomGoal())
 
+
+# Publish a goal on the move_base/goal topic
+def SetGoal(goal):
     goalTopic.publish(goal)
-    print(goal)
+    print("Goal set")
+
+# Publish a cancel event to the move_base/cancel
+def CancelGoals():
+    cancelTopic.publish(GoalID())
+    print("Goals canceled")
+
+    
 
 # Publish a random goal as action with feedback from the navigation server
 def SetRandomGoalAction():
@@ -162,7 +178,8 @@ joystickTopic = rospy.Subscriber("cmd_vel_joy", Twist, JoystickInputCallback);
 lastJoystickMsg = Twist()
 lastJoystickMsgUpdate = float(0)
 
-goalTopic = rospy.Publisher("move_base/goal", MoveBaseGoal, queue_size=25)
+goalTopic = rospy.Publisher("move_base/goal", MoveBaseActionGoal, queue_size=25)
+cancelTopic = rospy.Publisher("move_base/cancel", GoalID, queue_size=25)
 
 commandVelTopic = rospy.Publisher("/cmd_vel", Twist, queue_size=25)
 
