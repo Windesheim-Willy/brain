@@ -22,44 +22,48 @@ currentState = STATE_AUTONOMOUS
 
 # Handler while in STATE_AUTONOMOUS
 def HandleStateAutonomous():
+    global lastMoveBaseMsg
+
     print("Willy is autonomous driving!")
     #TODO if willy has goal
     #TODO if false -> set random goal
-    #TODO proxy cmdvel from move_base to motor driver cmdvel
+    commandVelTopic.publish(lastMoveBaseMsg)
+
 
 # Handler while in STATE_EMERGENCY
 def HandlerStateEmergency():
     print("Willy is in a state of emergency")
-    #TODO keep sending stop messages to cmdvel
+    commandVelTopic.publish(Twist())
 
 # Handler while in STATE_HUMAN_CONTROL
 def HandlerStateHumanControl():
+    global lastJoystickMsg
+
     print("Willy is listening to human controls")
-    #TODO get human input from topic
-    #TODO publish human input on cmdvel topic
+    commandVelTopic.publish(lastJoystickMsg)
 
 # Handler while in STATE_SOCIAL_INTERACTION
 def HandleSocialInteraction():
     print("Willy is talking to someone")
-    #TODO nothing really, maybe send a stop packet once in a while to make sure the robot has stopped
+    commandVelTopic.publish(Twist())
 
 # Handler while in STATE_MOVE_TO_TAG
 def HandleMoveToTag():
+    global lastMoveBaseMsg
+    
     print("Willy is moving to a specific location")
-    #TODO Check if robot it near goal
-    #TODO    if it is -> cancle the goal + change state to STATE_AUTONOMOUS
-    #TODO otherwise
-    #TODO   get cmdvel from move_base and proxy it to the motor controller
+
+    commandVelTopic.publish(lastMoveBaseMsg)
 
 # This function is called when willy transitions from one state to another
 def HandleTransition(currentState, newState):
-    print("Willy is going from state " + currentState + " to state "+ newState)
+    print("Willy is going from state " + str(currentState) + " to state "+ str(newState))
     
 
 def UpdateState():
     global currentState
     global lastJoystickMsgUpdate
-    
+
     print ("Should willy change state?")
     
     # if human input has been recieved within 5 seconds, a human is trying to take over
@@ -137,18 +141,30 @@ def JoystickInputCallback(msg):
     lastJoystickMsg = msg
     lastJoystickMsgUpdate = time.time()
 
+def MoveBaseInputCallback(msg):
+    global lastMoveBaseMsg
+
+    print("Got move_base cmd vel update")
+
+    lastMoveBaseMsg = msg
+
 ###############################################################
 
 
 # Init ROS components
 rospy.init_node('topic_publisher')
 commandTopic = rospy.Subscriber("brain_command", Int32, ExecuteCommand);
+
+moveBaseTopic = rospy.Subscriber("cmd_vel_move_base", Twist, MoveBaseInputCallback)
+lastMoveBaseMsg = Twist()
+
 joystickTopic = rospy.Subscriber("cmd_vel_joy", Twist, JoystickInputCallback);
 lastJoystickMsg = Twist()
 lastJoystickMsgUpdate = float(0)
 
-
 goalTopic = rospy.Publisher("move_base/goal", MoveBaseGoal, queue_size=25)
+
+commandVelTopic = rospy.Publisher("/cmd_vel", Twist, queue_size=25)
 
 # Init global components
 commandValue = 0
