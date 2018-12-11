@@ -7,11 +7,82 @@ import random
 import actionlib
 from time import sleep
 from std_msgs.msg import String, Int32
-from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionGoal
 from actionlib_msgs.msg import GoalID
 
+STATE_AUTONOMOUS = 0
+STATE_EMERGENCY = 1
+STATE_HUMAN_CONTROL = 2
+STATE_SOCIAL_INTERACTION = 3
+STATE_MOVE_TO_TAG = 4
+
+currentState = STATE_AUTONOMOUS
+
 ########################## Methods ############################ 
+
+# Handler while in STATE_AUTONOMOUS
+def HandleStateAutonomous():
+    global lastMoveBaseMsg
+
+    print("Willy is autonomous driving!")
+    #TODO if willy has goal
+    #TODO if false -> set random goal
+    commandVelTopic.publish(lastMoveBaseMsg)
+
+
+# Handler while in STATE_EMERGENCY
+def HandlerStateEmergency():
+    print("Willy is in a state of emergency")
+    commandVelTopic.publish(Twist())
+
+# Handler while in STATE_HUMAN_CONTROL
+def HandlerStateHumanControl():
+    global lastJoystickMsg
+
+    print("Willy is listening to human controls")
+    commandVelTopic.publish(lastJoystickMsg)
+
+# Handler while in STATE_SOCIAL_INTERACTION
+def HandleSocialInteraction():
+    print("Willy is talking to someone")
+    commandVelTopic.publish(Twist())
+
+# Handler while in STATE_MOVE_TO_TAG
+def HandleMoveToTag():
+    global lastMoveBaseMsg
+    
+    print("Willy is moving to a specific location")
+
+    commandVelTopic.publish(lastMoveBaseMsg)
+
+# This function is called when willy transitions from one state to another
+def HandleTransition(currentState, newState):
+    print("Willy is going from state " + str(currentState) + " to state "+ str(newState))
+    
+
+def UpdateState():
+    global currentState
+    global lastJoystickMsgUpdate
+
+    print ("Should willy change state?")
+    
+    # if human input has been recieved within 5 seconds, a human is trying to take over
+    humanTakeover = (time.time() - lastJoystickMsgUpdate) < 5
+
+    #TODO check emergency    
+    if currentState == STATE_AUTONOMOUS:
+        if humanTakeover:
+            HandleTransition(currentState, STATE_HUMAN_CONTROL)
+            currentState = STATE_HUMAN_CONTROL
+    if currentState == STATE_HUMAN_CONTROL:
+        if not humanTakeover:
+            HandleTransition(currentState, STATE_AUTONOMOUS)
+            currentState = STATE_AUTONOMOUS
+    #TODO check if in range of move goal for tag
+    #TODO check if social interaction wants to stop
+        
+
 
 # Interrupt event for commanding the brain
 def ExecuteCommand(msg):
@@ -78,6 +149,20 @@ def SetRandomGoalAction():
     else:
         return client.get_result()
 
+def JoystickInputCallback(msg):
+    global lastJoystickMsgUpdate
+    global lastJoystickMsg
+
+    print("Got joystick input")
+    lastJoystickMsg = msg
+    lastJoystickMsgUpdate = time.time()
+
+def MoveBaseInputCallback(msg):
+    global lastMoveBaseMsg
+
+    print("Got move_base cmd vel update")
+
+    lastMoveBaseMsg = msg
 
 ###############################################################
 
@@ -85,8 +170,18 @@ def SetRandomGoalAction():
 # Init ROS components
 rospy.init_node('topic_publisher')
 commandTopic = rospy.Subscriber("brain_command", Int32, ExecuteCommand);
+
+moveBaseTopic = rospy.Subscriber("cmd_vel_move_base", Twist, MoveBaseInputCallback)
+lastMoveBaseMsg = Twist()
+
+joystickTopic = rospy.Subscriber("cmd_vel_joy", Twist, JoystickInputCallback);
+lastJoystickMsg = Twist()
+lastJoystickMsgUpdate = float(0)
+
 goalTopic = rospy.Publisher("move_base/goal", MoveBaseActionGoal, queue_size=25)
 cancelTopic = rospy.Publisher("move_base/cancel", GoalID, queue_size=25)
+
+commandVelTopic = rospy.Publisher("/cmd_vel", Twist, queue_size=25)
 
 # Init global components
 commandValue = 0
@@ -121,6 +216,18 @@ tagLocations = {
 
 # Heartbeat for this wonderfull brain
 while not rospy.is_shutdown():
-	print(commandValue)
-	sleep(0.5)
+    UpdateState()
+    
+    if currentState == STATE_HUMAN_CONTROL:
+        HandlerStateHumanControl()
+    if currentState == STATE_AUTONOMOUS:
+        HandleStateAutonomous()
+    if currentState == STATE_EMERGENCY:
+        HandlerStateEmergency()
+    if currentState == STATE_SOCIAL_INTERACTION:
+        HandleSocialInteraction()
+    if currentState == STATE_MOVE_TO_TAG:
+        HandleMoveToTag()
+    
+    sleep(0.5)
 
