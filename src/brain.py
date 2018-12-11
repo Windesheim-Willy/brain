@@ -16,6 +16,8 @@ STATE_HUMAN_CONTROL = 2
 STATE_SOCIAL_INTERACTION = 3
 STATE_MOVE_TO_TAG = 4
 
+currentState = STATE_AUTONOMOUS
+
 ########################## Methods ############################ 
 
 # Handler while in STATE_AUTONOMOUS
@@ -54,9 +56,27 @@ def HandleTransition(currentState, newState):
     print("Willy is going from state " + currentState + " to state "+ newState)
     
 
-def ShouldChangeState():
-    #TODO get /interaction/is_active and check if we should change state
+def UpdateState():
+    global currentState
+    global lastJoystickMsgUpdate
+    
     print ("Should willy change state?")
+    
+    # if human input has been recieved within 5 seconds, a human is trying to take over
+    humanTakeover = (time.time() - lastJoystickMsgUpdate) < 5
+
+    #TODO check emergency    
+    if currentState == STATE_AUTONOMOUS:
+        if humanTakeover:
+            HandleTransition(currentState, STATE_HUMAN_CONTROL)
+            currentState = STATE_HUMAN_CONTROL
+    if currentState == STATE_HUMAN_CONTROL:
+        if not humanTakeover:
+            HandleTransition(currentState, STATE_AUTONOMOUS)
+            currentState = STATE_AUTONOMOUS
+    #TODO check if in range of move goal for tag
+    #TODO check if social interaction wants to stop
+        
 
 
 # Interrupt event for commanding the brain
@@ -109,8 +129,13 @@ def SetRandomGoalAction():
     else:
         return client.get_result()
 
-def JoystickInputCommand(msg):
+def JoystickInputCallback(msg):
+    global lastJoystickMsgUpdate
+    global lastJoystickMsg
+
     print("Got joystick input")
+    lastJoystickMsg = msg
+    lastJoystickMsgUpdate = time.time()
 
 ###############################################################
 
@@ -118,7 +143,11 @@ def JoystickInputCommand(msg):
 # Init ROS components
 rospy.init_node('topic_publisher')
 commandTopic = rospy.Subscriber("brain_command", Int32, ExecuteCommand);
-joystickTopic = rospy.Subscriber("cmd_vel", Twist, JoystickInputCommand);
+joystickTopic = rospy.Subscriber("cmd_vel_joy", Twist, JoystickInputCallback);
+lastJoystickMsg = Twist()
+lastJoystickMsgUpdate = float(0)
+
+
 goalTopic = rospy.Publisher("move_base/goal", MoveBaseGoal, queue_size=25)
 
 # Init global components
@@ -154,6 +183,18 @@ tagLocations = {
 
 # Heartbeat for this wonderfull brain
 while not rospy.is_shutdown():
-	print(commandValue)
-	sleep(0.5)
+    UpdateState()
+    
+    if currentState == STATE_HUMAN_CONTROL:
+        HandlerStateHumanControl()
+    if currentState == STATE_AUTONOMOUS:
+        HandleStateAutonomous()
+    if currentState == STATE_EMERGENCY:
+        HandlerStateEmergency()
+    if currentState == STATE_SOCIAL_INTERACTION:
+        HandleSocialInteraction()
+    if currentState == STATE_MOVE_TO_TAG:
+        HandleMoveToTag()
+    
+    sleep(0.5)
 
