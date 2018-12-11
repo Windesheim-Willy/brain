@@ -10,7 +10,53 @@ from std_msgs.msg import String, Int32
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
+STATE_AUTONOMOUS = 0
+STATE_EMERGENCY = 1
+STATE_HUMAN_CONTROL = 2
+STATE_SOCIAL_INTERACTION = 3
+STATE_MOVE_TO_TAG = 4
+
 ########################## Methods ############################ 
+
+# Handler while in STATE_AUTONOMOUS
+def HandleStateAutonomous():
+    print("Willy is autonomous driving!")
+
+# Handler while in STATE_EMERGENCY
+def HandlerStateEmergency():
+    print("Willy is in a state of emergency")
+
+# Handler while in STATE_HUMAN_CONTROL
+def HandlerStateHumanControl():
+    print("Willy is listening to human controls")
+    #TODO get human input from topic
+    #TODO publish human input on cmdvel topic
+
+# Handler while in STATE_SOCIAL_INTERACTION
+def HandleSocialInteraction():
+    print("Willy is talking to someone")
+    #TODO nothing really, maybe send a stop packet once in a while to make sure the robot has stopped
+
+# Handler while in STATE_MOVE_TO_TAG
+def HandleMoveToTag():
+    print("Willy is moving to a specific location")
+    #TODO check if a goal is set
+    #TODO   if not set a goal 
+    #TODO
+    #TODO Check if robot it near goal
+    #TODO    if it is -> cancle the goal + change state to STATE_AUTONOMOUS
+    #TODO
+    #TODO get cmdvel from move_base and proxy it to the motor controller
+
+# This function is called when willy transitions from one state to another
+def HandleTransition(currentState, newState):
+    print("Willy is going from state " + currentState + " to state "+ newState)
+    
+
+def ShouldChangeState():
+    #TODO get /interaction/is_active and check if we should change state
+    print ("Should willy change state?")
+
 
 # Interrupt event for commanding the brain
 def ExecuteCommand(msg):
