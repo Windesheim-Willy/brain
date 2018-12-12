@@ -5,101 +5,66 @@ import time
 import math
 import random
 import actionlib
+import roslib
 from time import sleep
-from std_msgs.msg import String, Int32
+from std_msgs.msg import String, Int32, Bool
 from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionGoal
 from actionlib_msgs.msg import GoalID
+from dynamic_reconfigure.parameter_generator import *
 
-STATE_AUTONOMOUS = 0
-STATE_EMERGENCY = 1
-STATE_HUMAN_CONTROL = 2
-STATE_SOCIAL_INTERACTION = 3
-STATE_MOVE_TO_TAG = 4
+########################## Classes ############################
+class Command:
+	SetRandomGoal = 1
+	CancelGoal = 2
+	SlowDown = 3
+        StartAutonomousMovement = 4
+	StartZoneMovement = 5
 
-currentState = STATE_AUTONOMOUS
+class State:
+	Autonomous = 1
+	Zone = 2
+
+class Zone:
+	T5Yellow = 1
+	T5Bridge = 2
+	T5Red = 3
 
 ########################## Methods ############################ 
 
-# Handler while in STATE_AUTONOMOUS
-def HandleStateAutonomous():
-    global lastMoveBaseMsg
-
-    print("Willy is autonomous driving!")
-    #TODO if willy has goal
-    #TODO if false -> set random goal
-    commandVelTopic.publish(lastMoveBaseMsg)
-
-
-# Handler while in STATE_EMERGENCY
-def HandlerStateEmergency():
-    print("Willy is in a state of emergency")
-    commandVelTopic.publish(Twist())
-
-# Handler while in STATE_HUMAN_CONTROL
-def HandlerStateHumanControl():
-    global lastJoystickMsg
-
-    print("Willy is listening to human controls")
-    commandVelTopic.publish(lastJoystickMsg)
-
-# Handler while in STATE_SOCIAL_INTERACTION
-def HandleSocialInteraction():
-    print("Willy is talking to someone")
-    commandVelTopic.publish(Twist())
-
-# Handler while in STATE_MOVE_TO_TAG
-def HandleMoveToTag():
-    global lastMoveBaseMsg
-    
-    print("Willy is moving to a specific location")
-
-    commandVelTopic.publish(lastMoveBaseMsg)
-
-# This function is called when willy transitions from one state to another
-def HandleTransition(currentState, newState):
-    print("Willy is going from state " + str(currentState) + " to state "+ str(newState))
-    
-
-def UpdateState():
-    global currentState
-    global lastJoystickMsgUpdate
-
-    print ("Should willy change state?")
-    
-    # if human input has been recieved within 5 seconds, a human is trying to take over
-    humanTakeover = (time.time() - lastJoystickMsgUpdate) < 5
-
-    #TODO check emergency    
-    if currentState == STATE_AUTONOMOUS:
-        if humanTakeover:
-            HandleTransition(currentState, STATE_HUMAN_CONTROL)
-            currentState = STATE_HUMAN_CONTROL
-    if currentState == STATE_HUMAN_CONTROL:
-        if not humanTakeover:
-            HandleTransition(currentState, STATE_AUTONOMOUS)
-            currentState = STATE_AUTONOMOUS
-    #TODO check if in range of move goal for tag
-    #TODO check if social interaction wants to stop
-        
-
-
+# Interuppt for move_base/status updates
+def StatusUpdate(msg):
+    code = int(msg.data)
+    if code == 3:
+	if state == State.Autonomous:
+	  SetAutonomousMovementGoal()
+	if state == State.Zone:
+	  SetZoneMovementGoal()
+		
 # Interrupt event for commanding the brain
 def ExecuteCommand(msg):
     commandValue = int(msg.data)
-    if commandValue == 1:
+    if commandValue == Command.SetRandomGoal:
 	SetRandomGoal()
-    if commandValue == 2:
+    if commandValue == Command.CancelGoal:
 	CancelGoals()
+    if commandValue == Command.StartAutonomousMovement:
+	stateValue = State.Autonomous
+    if commandValue == Command.StartZoneMovement:
+	stateValue = State.Zone
+	
+
+# Returns a location by index
+def GetLocation(index):
+    return tagLocations.values()[index]
 
 # Picks a random location out of the apriltag dictionary
 def GetRandomLocation():
     index = random.randint(0,len(tagLocations)-1)
     return tagLocations.values()[index]
 
-# Create a MoveBaseGoal with a random location
-def GetRandomGoal():
-    location = GetRandomLocation()
+# Returns a MoveBasGoal by location
+def GetGoal(location):
     goal = MoveBaseActionGoal()
 
     goal.header.seq = 0
@@ -119,6 +84,10 @@ def GetRandomGoal():
 	
     return goal
 
+# Returns a MoveBaseGoal with a random location
+def GetRandomGoal():
+    return GetGoal(GetRandomLocation())
+
 # Publish a random goal
 def SetRandomGoal():
     SetGoal(GetRandomGoal())
@@ -126,65 +95,57 @@ def SetRandomGoal():
 
 # Publish a goal on the move_base/goal topic
 def SetGoal(goal):
+    CancelGoals()
     goalTopic.publish(goal)
     print("Goal set")
 
-# Publish a cancel event to the move_base/cancel
+# Publish a cancelevent to the move_base/cancel
 def CancelGoals():
     cancelTopic.publish(GoalID())
     print("Goals canceled")
 
+# Starts autonomous movement
+def SetAutonomousMovementGoal():
+    SetGoal(GetGoal(GetLocation(random.randint(0, len(tagLocations)-1))))	
+
+# Start zone movement
+def SetZoneMomeventGoal():
+    rangeLength = (len(tagLocations)-1)/3
+    rangeMin = (zoneValue * rangeLength) - rangeLength
+    rangeMax = (zoneValue * rangeLength)
+    index = random.randint(rangeMin, rangeMax)
+    SetGoal(GetGoal(GetLocation(index)))
+	
+
     
 
-# Publish a random goal as action with feedback from the navigation server
-def SetRandomGoalAction():
-    client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-
-    client.wait_for_server()
-    client.send_goal(GetRandomGoal())
-    wait = client.wait_for_result()
-    if not wait:
-        rospy.logerr("Action server not available!")
-        rospy.signal_shutdown("Action server not available!")
-    else:
-        return client.get_result()
-
-def JoystickInputCallback(msg):
-    global lastJoystickMsgUpdate
-    global lastJoystickMsg
-
-    print("Got joystick input")
-    lastJoystickMsg = msg
-    lastJoystickMsgUpdate = time.time()
-
-def MoveBaseInputCallback(msg):
-    global lastMoveBaseMsg
-
-    print("Got move_base cmd vel update")
-
-    lastMoveBaseMsg = msg
 
 ###############################################################
 
 
 # Init ROS components
-rospy.init_node('topic_publisher')
-commandTopic = rospy.Subscriber("brain_command", Int32, ExecuteCommand);
+rospy.init_node("brain")
 
-moveBaseTopic = rospy.Subscriber("cmd_vel_move_base", Twist, MoveBaseInputCallback)
-lastMoveBaseMsg = Twist()
+# Manual command topics
+commandTopic = rospy.Subscriber("brain_command", Int32, ExecuteCommand)
 
-joystickTopic = rospy.Subscriber("cmd_vel_joy", Twist, JoystickInputCallback);
-lastJoystickMsg = Twist()
-lastJoystickMsgUpdate = float(0)
+# System command topics
+statusTopic = rospy.Subscriber("move_base/status", Bool, StatusUpdate)
+emergencyTopic = rospy.Subscriber("emergency", Bool, ExecuteCommand)
 
-goalTopic = rospy.Publisher("move_base/goal", MoveBaseActionGoal, queue_size=25)
+# Publisher topics
+motorTopic = rospy.Publisher("cmd_vel", Twist, queue_size=25)
+goalTopic = rospy.Publisher("move_base/goal", MoveBaseActionGoal,queue_size=25)
 cancelTopic = rospy.Publisher("move_base/cancel", GoalID, queue_size=25)
 
-commandVelTopic = rospy.Publisher("/cmd_vel", Twist, queue_size=25)
+# Subsc
+#rospy.argv("rosrun brain publisher move_base/cancel:=/HenkDeTank")
+
 
 # Init global components
 commandValue = 0
+stateValue = State.Autonomous
+zoneValue = Zone.T5Yellow
 aprilTag = tuple()
 
 # Build tag location dictionary
@@ -216,18 +177,6 @@ tagLocations = {
 
 # Heartbeat for this wonderfull brain
 while not rospy.is_shutdown():
-    UpdateState()
-    
-    if currentState == STATE_HUMAN_CONTROL:
-        HandlerStateHumanControl()
-    if currentState == STATE_AUTONOMOUS:
-        HandleStateAutonomous()
-    if currentState == STATE_EMERGENCY:
-        HandlerStateEmergency()
-    if currentState == STATE_SOCIAL_INTERACTION:
-        HandleSocialInteraction()
-    if currentState == STATE_MOVE_TO_TAG:
-        HandleMoveToTag()
-    
-    sleep(0.5)
+	print(commandValue)
+	sleep(0.5)
 
