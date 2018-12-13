@@ -10,48 +10,169 @@ from time import sleep
 from std_msgs.msg import String, Int32, Bool
 from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionGoal
-from actionlib_msgs.msg import GoalID
+from actionlib_msgs.msg import GoalID, GoalStatusArray
 from dynamic_reconfigure.parameter_generator import *
 
-########################## Classes ############################
+########################## Enums ############################
 class Command:
-	SetRandomGoal = 1
-	CancelGoal = 2
-	SlowDown = 3
-        StartAutonomousMovement = 4
-	StartZoneMovement = 5
+	SetRandomGoal = 0
+	CancelGoal = 1
+	SlowDown = 2
+	StartAutonomousMovement = 3
+	StartZoneMovement = 4
 
 class State:
-	Autonomous = 1
-	Zone = 2
+	Autonomous = 0
+	Emergency = 1
+	HumanControl = 2
+	SocialInteraction = 3
+	MoveToTag = 4
+
+class Mode:
+	Full = 0
+	Zone = 1
 
 class Zone:
 	T5Yellow = 1
 	T5Bridge = 2
 	T5Red = 3
 
+class MoveBaseStatus:
+	Pending         = 0   # The goal has yet to be processed by the action server
+	Active          = 1   # The goal is currently being processed by the action server
+	Preempted       = 2   # The goal received a cancel request after it started executing
+                      #   and has since completed its execution (Terminal State)
+	Succeeded      = 3   # The goal was achieved successfully by the action server (Terminal State)
+	Aborted         = 4   # The goal was aborted during execution by the action server due
+                      #    to some failure (Terminal State)
+	Rejected        = 5   # The goal was rejected by the action server without being processed,
+                      #    because the goal was unattainable or invalid (Terminal State)
+	Preempting      = 6   # The goal received a cancel request after it started executing
+                      #    and has not yet completed execution
+	Recalling       = 7   # The goal received a cancel request before it started executing,
+                      #    but the action server has not yet confirmed that the goal is canceled
+	Recalled        = 8   # The goal received a cancel request before it started executing
+                      #    and was successfully cancelled (Terminal State)
+	Lost            = 9   # An action client can determine that a goal is LOST. This should not be
+                            #    sent over the wire by an action server
+
+########################## Globals ############################
+currentState = State.Autonomous
+currentCommand = Command.StartAutonomousMovement
+currentMode = Mode.Full
+movebaseStatus = GoalStatusArray()
+lastMoveBaseMsg = Twist()
+lastJoystickMsg = Twist()
+lastJoystickMsgUpdate = float(0)
+lastEmergencyMsg = Bool()
+zoneValue = Zone.T5Yellow
+
 ########################## Methods ############################ 
+
+# Handler while in State.Autonomous
+def HandleStateAutonomous():
+	global lastMoveBaseMsg
+	global movebaseStatus
+	global currentMode
+
+	print("Willy is autonomous driving!")
+
+
+
+	if len(movebaseStatus.status_list) <= 0 or movebaseStatus.status_list[0].status == MoveBaseStatus.Succeeded:
+		if currentMode == Mode.Full:
+			SetAutonomousMovementGoal()
+		if currentMode == Mode.Zone:
+			SetZoneMovementGoal()
+	motorTopic.publish(lastMoveBaseMsg)
+
+
+# Handler while in State.Emergency
+def HandlerStateEmergency():
+    print("Willy is in a state of emergency")
+    commandVelTopic.publish(Twist())
+
+# Handler while in State.HumanControl
+def HandlerStateHumanControl():
+    global lastJoystickMsg
+
+    print("Willy is listening to human controls")
+    commandVelTopic.publish(lastJoystickMsg)
+
+# Handler while in State.SocialInteraction
+def HandleSocialInteraction():
+    print("Willy is talking to someone")
+    commandVelTopic.publish(Twist())
+
+# Handler while in State.MoveToTag
+def HandleMoveToTag():
+    global lastMoveBaseMsg
+    
+    print("Willy is moving to a specific location")
+
+    commandVelTopic.publish(lastMoveBaseMsg)
+
+# This function is called when willy transitions from one state to another
+def HandleTransition(currentState, newState):
+    print("Willy is going from state " + str(currentState) + " to state "+ str(newState))
+    
+
+def UpdateState():
+	global currentState
+	global lastJoystickMsgUpdate
+	global lastEmergencyMsg
+
+	print ("Should willy change state?")
+    
+    # if human input has been recieved within 5 seconds, a human is trying to take over
+	humanTakeover = (time.time() - lastJoystickMsgUpdate) < 5
+
+	if lastEmergencyMsg.data == True:
+		currentState = State.Emergency
+		return
+	else:
+		if currentState == State.Emergency:
+			currenState = State.Autonomous
+		
+	if currentState == State.Autonomous:
+		if humanTakeover:
+			HandleTransition(currentState, State.HumanControl)
+			currentState = State.HumanControl
+	if currentState == State.HumanControl:
+		if not humanTakeover:
+			HandleTransition(currentState, State.Autonomous)
+			currentState = State.Autonomous
+    #TODO check if in range of move goal for tag
+    #TODO check if social interaction wants to stop
+
 
 # Interuppt for move_base/status updates
 def StatusUpdate(msg):
-    code = int(msg.data)
-    if code == 3:
-	if state == State.Autonomous:
-	  SetAutonomousMovementGoal()
-	if state == State.Zone:
-	  SetZoneMovementGoal()
+    global movebaseStatus 
+    movebaseStatus = msg
 		
 # Interrupt event for commanding the brain
 def ExecuteCommand(msg):
-    commandValue = int(msg.data)
-    if commandValue == Command.SetRandomGoal:
-	SetRandomGoal()
-    if commandValue == Command.CancelGoal:
-	CancelGoals()
-    if commandValue == Command.StartAutonomousMovement:
-	stateValue = State.Autonomous
-    if commandValue == Command.StartZoneMovement:
-	stateValue = State.Zone
+	global currentCommand
+	global currentMode
+
+	currentCommand = int(msg.data)
+
+	if commandValue == Command.SetRandomGoal:
+		SetRandomGoal()
+	if commandValue == Command.CancelGoal:
+		CancelGoals()
+	if commandValue == Command.StartAutonomousMovement:
+		currentMode = Mode.Full
+	if commandValue == Command.StartZoneMovement:
+		currentMode = Mode.Zone
+
+# Interrupt event for emergency topic
+def EmergencyInputCallback(msg):
+	global lastEmergencyMsg
+
+	print("Got emergency bool update")
+	lastEmergencyMsg = msg
 	
 
 # Returns a location by index
@@ -115,6 +236,24 @@ def SetZoneMomeventGoal():
     rangeMax = (zoneValue * rangeLength)
     index = random.randint(rangeMin, rangeMax)
     SetGoal(GetGoal(GetLocation(index)))
+
+# Callback method for joystick topic
+def JoystickInputCallback(msg):
+    global lastJoystickMsgUpdate
+    global lastJoystickMsg
+
+    print("Got joystick input")
+    lastJoystickMsg = msg
+    lastJoystickMsgUpdate = time.time()
+
+# Callback method for move_base topic
+def MoveBaseInputCallback(msg):
+    global lastMoveBaseMsg
+
+    print("Got move_base cmd vel update")
+    lastMoveBaseMsg = msg
+
+
 	
 
     
@@ -129,24 +268,16 @@ rospy.init_node("brain")
 # Manual command topics
 commandTopic = rospy.Subscriber("brain_command", Int32, ExecuteCommand)
 
-# System command topics
-statusTopic = rospy.Subscriber("move_base/status", Bool, StatusUpdate)
-emergencyTopic = rospy.Subscriber("emergency", Bool, ExecuteCommand)
-
 # Publisher topics
 motorTopic = rospy.Publisher("cmd_vel", Twist, queue_size=25)
 goalTopic = rospy.Publisher("move_base/goal", MoveBaseActionGoal,queue_size=25)
 cancelTopic = rospy.Publisher("move_base/cancel", GoalID, queue_size=25)
 
-# Subsc
-#rospy.argv("rosrun brain publisher move_base/cancel:=/HenkDeTank")
-
-
-# Init global components
-commandValue = 0
-stateValue = State.Autonomous
-zoneValue = Zone.T5Yellow
-aprilTag = tuple()
+# Subscribers
+statusTopic = rospy.Subscriber("move_base/status", GoalStatusArray, StatusUpdate)
+moveBaseTopic = rospy.Subscriber("cmd_vel_move_base", Twist, MoveBaseInputCallback)
+joystickTopic = rospy.Subscriber("cmd_vel_joy", Twist, JoystickInputCallback);
+emergencyTopic = rospy.Subscriber("emergency", Bool, EmergencyInputCallback)
 
 # Build tag location dictionary
 tagLocations = {
@@ -177,6 +308,18 @@ tagLocations = {
 
 # Heartbeat for this wonderfull brain
 while not rospy.is_shutdown():
-	print(commandValue)
+	UpdateState()
+    
+	if currentState == State.HumanControl:
+		HandlerStateHumanControl()
+	if currentState == State.Autonomous:
+		HandleStateAutonomous()
+	if currentState == State.Emergency:
+		HandlerStateEmergency()
+	if currentState == State.SocialInteraction:
+		HandleSocialInteraction()
+	if currentState == State.MoveToTag:
+	    HandleMoveToTag()
+    
 	sleep(0.5)
 
