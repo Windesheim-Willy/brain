@@ -18,8 +18,6 @@ class Command:
 	SetRandomGoal = 0
 	CancelGoal = 1
 	SlowDown = 2
-	StartAutonomousMovement = 3
-	StartZoneMovement = 4
 
 class State:
 	Autonomous = 0
@@ -28,11 +26,8 @@ class State:
 	SocialInteraction = 3
 	MoveToTag = 4
 
-class Mode:
-	Full = 0
-	Zone = 1
-
 class Zone:
+	All = 0
 	T5Yellow = 1
 	T5Bridge = 2
 	T5Red = 3
@@ -58,14 +53,13 @@ class MoveBaseStatus:
 
 ########################## Globals ############################
 currentState = State.Autonomous
-currentCommand = Command.StartAutonomousMovement
-currentMode = Mode.Full
+currentCommand = Command.SlowDown
+currentZone = Zone.All
 movebaseStatus = GoalStatusArray()
 lastMoveBaseMsg = Twist()
 lastJoystickMsg = Twist()
 lastJoystickMsgUpdate = float(0)
 lastEmergencyMsg = Bool()
-zoneValue = Zone.T5Yellow
 
 ########################## Methods ############################ 
 
@@ -73,16 +67,16 @@ zoneValue = Zone.T5Yellow
 def HandleStateAutonomous():
 	global lastMoveBaseMsg
 	global movebaseStatus
-	global currentMode
+	global currentZone
 
 	print("Willy is autonomous driving!")
 
 
 
 	if len(movebaseStatus.status_list) <= 0 or movebaseStatus.status_list[0].status == MoveBaseStatus.Succeeded:
-		if currentMode == Mode.Full:
+		if currentZone == Zone.All:
 			SetAutonomousMovementGoal()
-		if currentMode == Mode.Zone:
+		else:
 			SetZoneMovementGoal()
 	motorTopic.publish(lastMoveBaseMsg)
 
@@ -154,7 +148,6 @@ def StatusUpdate(msg):
 # Interrupt event for commanding the brain
 def ExecuteCommand(msg):
 	global currentCommand
-	global currentMode
 
 	currentCommand = int(msg.data)
 
@@ -162,10 +155,15 @@ def ExecuteCommand(msg):
 		SetRandomGoal()
 	if commandValue == Command.CancelGoal:
 		CancelGoals()
-	if commandValue == Command.StartAutonomousMovement:
-		currentMode = Mode.Full
-	if commandValue == Command.StartZoneMovement:
-		currentMode = Mode.Zone
+
+	print("Current command is: %d" % currentCommand)
+
+# Interrupt event for changing the zone
+def ExecuteChangeZone(msg):
+	global currentZone
+
+	currentZone = int(msg.data)
+	print("Current zone is: %d" % currentZone)
 
 # Interrupt event for emergency topic
 def EmergencyInputCallback(msg):
@@ -230,10 +228,10 @@ def SetAutonomousMovementGoal():
     SetGoal(GetGoal(GetLocation(random.randint(0, len(tagLocations)-1))))	
 
 # Start zone movement
-def SetZoneMomeventGoal():
+def SetZoneMovementGoal():
     rangeLength = (len(tagLocations)-1)/3
-    rangeMin = (zoneValue * rangeLength) - rangeLength
-    rangeMax = (zoneValue * rangeLength)
+    rangeMin = (currentZone * rangeLength) - rangeLength
+    rangeMax = (currentZone * rangeLength)
     index = random.randint(rangeMin, rangeMax)
     SetGoal(GetGoal(GetLocation(index)))
 
@@ -254,11 +252,6 @@ def MoveBaseInputCallback(msg):
     lastMoveBaseMsg = msg
 
 
-	
-
-    
-
-
 ###############################################################
 
 
@@ -267,6 +260,7 @@ rospy.init_node("brain")
 
 # Manual command topics
 commandTopic = rospy.Subscriber("brain_command", Int32, ExecuteCommand)
+zoneTopic = rospy.Subscriber("brain_change_zone", Int32, ExecuteChangeZone)
 
 # Publisher topics
 motorTopic = rospy.Publisher("cmd_vel", Twist, queue_size=25)
