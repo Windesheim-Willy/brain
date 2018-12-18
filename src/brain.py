@@ -18,6 +18,7 @@ class Command:
 	SetRandomGoal = 0
 	CancelGoal = 1
 	SlowDown = 2
+	SpeedUp = 3
 
 class State:
 	Autonomous = 0
@@ -60,6 +61,7 @@ lastJoystickMsg = Twist()
 lastJoystickMsgUpdate = float(0)
 lastEmergencyMsg = Bool()
 slowDown = False
+socialInteractionActive = False
 
 ########################## Methods ############################ 
 
@@ -115,6 +117,7 @@ def UpdateState():
 	global currentState
 	global lastJoystickMsgUpdate
 	global lastEmergencyMsg
+	global socialInteractionActive
 
 	print ("Should willy change state?")
     
@@ -122,22 +125,29 @@ def UpdateState():
 	humanTakeover = (time.time() - lastJoystickMsgUpdate) < 5
 
 	if lastEmergencyMsg.data == True:
+		HandleTransition(currentState, State.Emergency)
 		currentState = State.Emergency
 		return
 	else:
 		if currentState == State.Emergency:
-			currenState = State.Autonomous
+			HandleTransition(currentState, State.Autonomous)
+			currentState = State.Autonomous
+			return
 		
 	if currentState == State.Autonomous:
 		if humanTakeover:
 			HandleTransition(currentState, State.HumanControl)
 			currentState = State.HumanControl
+			return
+		if socialInteractionActive:
+			HandleTransition(currentState, State.SocialInteraction)
+			currentState = State.SocialInteraction
+			return
 	if currentState == State.HumanControl:
 		if not humanTakeover:
 			HandleTransition(currentState, State.Autonomous)
 			currentState = State.Autonomous
     #TODO check if in range of move goal for tag
-    #TODO check if social interaction wants to stop
 
 
 # Interuppt for move_base/status updates
@@ -157,6 +167,8 @@ def ExecuteCommand(msg):
 		CancelGoals()
 	if currentCommand == Command.SlowDown:
 		slowDown = True
+	if currentCommand == Command.SpeedUp:
+		slowDown = False
 		
 	print("Current command is: %d" % currentCommand)
 
@@ -259,6 +271,13 @@ def MoveBaseInputCallback(msg):
     print("Got move_base cmd vel update")
     lastMoveBaseMsg = msg
 
+# Callback method for social interaction is active topic
+def SocialInteractionIsActiveCallback(msg):
+	global socialInteractionActive
+	if msg.data == 1 :
+		socialInteractionActive = True
+	else:
+		socialInteractionActive = False
 
 ###############################################################
 
@@ -278,8 +297,9 @@ cancelTopic = rospy.Publisher("move_base/cancel", GoalID, queue_size=25)
 # Subscribers
 statusTopic = rospy.Subscriber("move_base/status", GoalStatusArray, StatusUpdate)
 moveBaseTopic = rospy.Subscriber("cmd_vel_move_base", Twist, MoveBaseInputCallback)
-joystickTopic = rospy.Subscriber("cmd_vel_joy", Twist, JoystickInputCallback);
+joystickTopic = rospy.Subscriber("cmd_vel_joy", Twist, JoystickInputCallback)
 emergencyTopic = rospy.Subscriber("emergency", Bool, EmergencyInputCallback)
+socialInteractionTopic = rospy.Subscriber("interaction/is_active", Int32, SocialInteractionIsActiveCallback)
 
 # Build tag location dictionary
 tagLocations = {
@@ -323,5 +343,5 @@ while not rospy.is_shutdown():
 	if currentState == State.MoveToTag:
 	    HandleMoveToTag()
     
-	sleep(0.5)
+	sleep(0.1)
 
