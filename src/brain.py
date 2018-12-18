@@ -53,13 +53,13 @@ class MoveBaseStatus:
 
 ########################## Globals ############################
 currentState = State.Autonomous
-currentCommand = Command.SlowDown
 currentZone = Zone.All
 movebaseStatus = GoalStatusArray()
 lastMoveBaseMsg = Twist()
 lastJoystickMsg = Twist()
 lastJoystickMsgUpdate = float(0)
 lastEmergencyMsg = Bool()
+slowDown = False
 
 ########################## Methods ############################ 
 
@@ -78,7 +78,7 @@ def HandleStateAutonomous():
 			SetAutonomousMovementGoal()
 		else:
 			SetZoneMovementGoal()
-	motorTopic.publish(lastMoveBaseMsg)
+	motorTopic.publish(GetSpeed(lastMoveBaseMsg))
 
 
 # Handler while in State.Emergency
@@ -104,7 +104,7 @@ def HandleMoveToTag():
     
     print("Willy is moving to a specific location")
 
-    motorTopic.publish(lastMoveBaseMsg)
+    motorTopic.publish(GetSpeed(lastMoveBaseMsg))
 
 # This function is called when willy transitions from one state to another
 def HandleTransition(currentState, newState):
@@ -148,14 +148,17 @@ def StatusUpdate(msg):
 # Interrupt event for commanding the brain
 def ExecuteCommand(msg):
 	global currentCommand
+	global slowDown
 
 	currentCommand = int(msg.data)
 
-	if commandValue == Command.SetRandomGoal:
+	if currentCommand == Command.SetRandomGoal:
 		SetRandomGoal()
-	if commandValue == Command.CancelGoal:
+	if currentCommand == Command.CancelGoal:
 		CancelGoals()
-
+	if currentCommand == Command.SlowDown:
+		slowDown = True
+		
 	print("Current command is: %d" % currentCommand)
 
 # Interrupt event for changing the zone
@@ -202,6 +205,12 @@ def GetGoal(location):
     goal.goal.target_pose.pose.orientation.w = 1.0
 	
     return goal
+
+# Returns the desirable speed of a Twist message
+def GetSpeed(msg):
+	if slowDown:
+		msg.linear.x /= 2
+	return msg
 
 # Returns a MoveBaseGoal with a random location
 def GetRandomGoal():
