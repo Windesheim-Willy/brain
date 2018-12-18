@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import serial
 import rospy
+import rosgraph
+import rostopic
 import time
 import math
 import random
@@ -8,12 +10,16 @@ import actionlib
 import roslib
 from time import sleep
 from std_msgs.msg import String, Int32, Bool
-from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
+from geometry_msgs.msg import PoseWithCovarianceStamped, Twist, Point32
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionGoal
 from actionlib_msgs.msg import GoalID, GoalStatusArray
 from dynamic_reconfigure.parameter_generator import *
+from human_detection.msg import Person
+
+
 
 ########################## Enums ############################
+
 class Command:
 	SetRandomGoal = 0
 	CancelGoal = 1
@@ -59,6 +65,7 @@ movebaseStatus = GoalStatusArray()
 lastMoveBaseMsg = Twist()
 lastJoystickMsg = Twist()
 lastJoystickMsgUpdate = float(0)
+lastHumanDetectionUpdate = float(0)
 lastEmergencyMsg = Bool()
 slowDown = False
 socialInteractionActive = False
@@ -116,13 +123,18 @@ def HandleTransition(currentState, newState):
 def UpdateState():
 	global currentState
 	global lastJoystickMsgUpdate
+	global lastHumanDetectionUpdate
 	global lastEmergencyMsg
 	global socialInteractionActive
+	global slowDown
 
 	print ("Should willy change state?")
     
     # if human input has been recieved within 5 seconds, a human is trying to take over
 	humanTakeover = (time.time() - lastJoystickMsgUpdate) < 5
+
+	# if no human detected within 5 seconds, go back to normal speed
+	slowDown = ((time.time() - lastHumanDetectionUpdate)  < 5)
 
 	if lastEmergencyMsg.data == True:
 		HandleTransition(currentState, State.Emergency)
@@ -279,8 +291,19 @@ def SocialInteractionIsActiveCallback(msg):
 	else:
 		socialInteractionActive = False
 
-###############################################################
+# Callback method for human_dect topic
+def HumanDetectionInputCallback(msg):
+	global lastHumanDetectionUpdate
 
+	if "," in msg.data:
+		data = tuple(map(int, msg.data.split(",")))
+		if data[2] < 250:
+			slowDown = True
+			lastHumanDetectionUpdate = time.time()
+			print("Human detected, slow down")
+
+
+###############################################################
 
 # Init ROS components
 rospy.init_node("brain")
@@ -300,6 +323,8 @@ moveBaseTopic = rospy.Subscriber("cmd_vel_move_base", Twist, MoveBaseInputCallba
 joystickTopic = rospy.Subscriber("cmd_vel_joy", Twist, JoystickInputCallback)
 emergencyTopic = rospy.Subscriber("emergency", Bool, EmergencyInputCallback)
 socialInteractionTopic = rospy.Subscriber("interaction/is_active", Int32, SocialInteractionIsActiveCallback)
+humanDetectionTopic = rospy.Subscriber("human_dect", String, HumanDetectionInputCallback)
+
 
 # Build tag location dictionary
 tagLocations = {
@@ -342,6 +367,8 @@ while not rospy.is_shutdown():
 		HandleSocialInteraction()
 	if currentState == State.MoveToTag:
 	    HandleMoveToTag()
+
+	print(slowDown)
     
 	sleep(0.1)
 
