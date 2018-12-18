@@ -90,19 +90,19 @@ def HandleStateAutonomous():
 # Handler while in State.Emergency
 def HandlerStateEmergency():
     print("Willy is in a state of emergency")
-    commandVelTopic.publish(Twist())
+    motorTopic.publish(Twist())
 
 # Handler while in State.HumanControl
 def HandlerStateHumanControl():
     global lastJoystickMsg
 
     print("Willy is listening to human controls")
-    commandVelTopic.publish(lastJoystickMsg)
+    motorTopic.publish(lastJoystickMsg)
 
 # Handler while in State.SocialInteraction
 def HandleSocialInteraction():
     print("Willy is talking to someone")
-    commandVelTopic.publish(Twist())
+    motorTopic.publish(Twist())
 
 # Handler while in State.MoveToTag
 def HandleMoveToTag():
@@ -110,7 +110,7 @@ def HandleMoveToTag():
     
     print("Willy is moving to a specific location")
 
-    commandVelTopic.publish(lastMoveBaseMsg)
+    motorTopic.publish(lastMoveBaseMsg)
 
 # This function is called when willy transitions from one state to another
 def HandleTransition(currentState, newState):
