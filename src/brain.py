@@ -147,7 +147,6 @@ def StatusUpdate(msg):
 		
 # Interrupt event for commanding the brain
 def ExecuteCommand(msg):
-	global currentCommand
 	global slowDown
 
 	currentCommand = int(msg.data)
