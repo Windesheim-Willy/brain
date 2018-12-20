@@ -357,7 +357,7 @@ def InitialPoseCallback(msg):
 	global lastGoalMsg
 
 	print("Current pose")
-	print(lastGoalMsg.pose.pose.orientation)
+	print(lastGoalMsg.goal.target_pose.pose.orientation)
 	print("Initial pose")
 	print(msg.pose.pose.orientation)
 
