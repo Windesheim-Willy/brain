@@ -62,6 +62,7 @@ class MoveBaseStatus:
 currentState = State.Autonomous
 currentZone = Zone.All
 movebaseStatus = GoalStatusArray()
+lastGoalMsg = MoveBaseActionGoal()
 lastMoveBaseMsg = Twist()
 lastJoystickMsg = Twist()
 lastJoystickMsgUpdate = float(0)
@@ -71,6 +72,12 @@ slowDown = False
 socialInteractionActive = False
 
 ########################## Methods ############################ 
+
+def IsInRange(a, b, margin):
+    if(a < b+margin and a > b-margin):
+        return True
+    else:
+        return False
 
 # Handler while in State.Autonomous
 def HandleStateAutonomous():
@@ -246,7 +253,10 @@ def SetRandomGoal():
 
 # Publish a goal on the move_base/goal topic
 def SetGoal(goal):
+    global lastGoalMsg
+
     CancelGoals()
+    lastGoalMsg = goal
     goalTopic.publish(goal)
     print("Goal set")
 
@@ -302,6 +312,23 @@ def HumanDetectionInputCallback(msg):
 			lastHumanDetectionUpdate = time.time()
 			print("Human detected, slow down")
 
+# Callback method for checking the current pose of willy
+def CurrentPoseCallback(msg):
+	global lastGoalMsg
+
+	if IsInRange(msg.pose.pose.position.x, lastGoal.pose.pose.position.x, 1) and IsInRange(msg.pose.pose.position.y, lastGoal.pose.pose.position.y, 1):
+		print("Goal reached!")
+
+# Callback method for checking the initial pose set on move_base
+def InitialPoseCallback(msg):
+	global lastGoalMsg
+
+	print("Current pose")
+	print(lastGoalMsg.pose.pose.orientation)
+	print("Initial pose")
+	print(msg.pose.pose.orientation)
+	
+
 
 ###############################################################
 
@@ -319,6 +346,8 @@ cancelTopic = rospy.Publisher("move_base/cancel", GoalID, queue_size=25)
 
 # Subscribers
 statusTopic = rospy.Subscriber("move_base/status", GoalStatusArray, StatusUpdate)
+currentPoseTopic = rospy.Subscriber("amcl_pose", PoseWithCovarianceStamped, CurrentPoseCallback)
+initialPoseTopic = rospy.Subscriber("initialpose", PoseWithCovarianceStamped, InitialPoseCallback)
 moveBaseTopic = rospy.Subscriber("cmd_vel_move_base", Twist, MoveBaseInputCallback)
 joystickTopic = rospy.Subscriber("cmd_vel_joy", Twist, JoystickInputCallback)
 emergencyTopic = rospy.Subscriber("emergency", Bool, EmergencyInputCallback)
