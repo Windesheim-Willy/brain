@@ -227,7 +227,7 @@ def GetPose(location):
 	poseMessage.pose.pose.position.x = location[0]
 	poseMessage.pose.pose.position.y = location[1]
 	poseMessage.pose.pose.position.z = 0.0
-	
+
 	degrees = aprilTag[1] + 90
 	degrees = (degrees % 360 + 360) % 360;
 	radians = (math.pi/180) * degrees
@@ -243,7 +243,7 @@ def GetPose(location):
 # Publish a pose on the intialpose topic
 def SetPose(pose):
 	global lastPoseMsgUpdate
-	
+
 	lastPoseMsgUpdate = time.time()
 	initialposeTopic.publish(pose)
 	print("Initial pose set")
