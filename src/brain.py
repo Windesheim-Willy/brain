@@ -349,7 +349,7 @@ def HumanDetectionInputCallback(msg):
 def CurrentPoseCallback(msg):
 	global lastGoalMsg
 
-	if IsInRange(msg.pose.pose.position.x, lastGoal.pose.pose.position.x, 0.5) and IsInRange(msg.pose.pose.position.y, lastGoal.pose.pose.position.y, 0.5):
+	if IsInRange(msg.pose.pose.position.x, lastGoalMsg.goal.target_pose.pose.position.x, 0.5) and IsInRange(msg.pose.pose.position.y, lastGoalMsg.goal.target_pose.pose.position.y, 0.5):
 		print("Goal reached!")
 
 # Callback method for checking the initial pose set on move_base
@@ -366,9 +366,9 @@ def OpenMvInputCallBack(msg):
 	global lastPoseMsgUpdate
 
 	lastOpenMvMsg = tuple((
-	float(msg.split(",")[0]),
-	float(msg.split(",")[1]),
-	msg.split(",")[2]
+	float(msg.data.split(",")[0]),
+	float(msg.data.split(",")[1]),
+	msg.data.split(",")[2]
 	))
 
 	if lastOpenMvMsg[0] > 0 and ((time.time() - lastPoseMsgUpdate) < 5):
