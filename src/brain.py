@@ -44,7 +44,7 @@ class MoveBaseStatus:
 	Active          = 1   # The goal is currently being processed by the action server
 	Preempted       = 2   # The goal received a cancel request after it started executing
                       #   and has since completed its execution (Terminal State)
-	Succeeded      = 3   # The goal was achieved successfully by the action server (Terminal State)
+	Succeeded       = 3   # The goal was achieved successfully by the action server (Terminal State)
 	Aborted         = 4   # The goal was aborted during execution by the action server due
                       #    to some failure (Terminal State)
 	Rejected        = 5   # The goal was rejected by the action server without being processed,
@@ -62,11 +62,13 @@ class MoveBaseStatus:
 currentState = State.Autonomous
 currentZone = Zone.All
 movebaseStatus = GoalStatusArray()
+lastOpenMvMsg = tuple()
 lastGoalMsg = MoveBaseActionGoal()
 lastMoveBaseMsg = Twist()
 lastJoystickMsg = Twist()
 lastJoystickMsgUpdate = float(0)
 lastHumanDetectionUpdate = float(0)
+lastPoseMsgUpdate = float(0)
 lastEmergencyMsg = Bool()
 slowDown = False
 socialInteractionActive = False
@@ -215,6 +217,37 @@ def GetRandomLocation():
     index = random.randint(0,len(tagLocations)-1)
     return tagLocations.values()[index]
 
+def GetPose(location):
+	poseMessage = PoseWithCovarianceStamped()
+
+	poseMessage.header.seq = 0
+	poseMessage.header.frame_id = "map"
+	poseMessage.header.stamp.secs = rospy.get_rostime().secs
+	poseMessage.header.stamp.nsecs = rospy.get_rostime().nsecs
+	poseMessage.pose.pose.position.x = location[0]
+	poseMessage.pose.pose.position.y = location[1]
+	poseMessage.pose.pose.position.z = 0.0
+	
+	degrees = aprilTag[1] + 90
+	degrees = (degrees % 360 + 360) % 360;
+	radians = (math.pi/180) * degrees
+	poseMessage.pose.pose.orientation.x = 0.0
+	poseMessage.pose.pose.orientation.y = 0.0
+	poseMessage.pose.pose.orientation.z = math.cos(radians/2)
+	poseMessage.pose.pose.orientation.w = 1
+
+	poseMessage.pose.covariance = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 			0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 			0.0, 0.0]
+
+	return poseMessage
+
+# Publish a pose on the intialpose topic
+def SetPose(pose):
+	global lastPoseMsgUpdate
+	
+	lastPoseMsgUpdate = time.time()
+	initialposeTopic.publish(pose)
+	print("Initial pose set")
+
 # Returns a MoveBasGoal by location
 def GetGoal(location):
     goal = MoveBaseActionGoal()
@@ -316,7 +349,7 @@ def HumanDetectionInputCallback(msg):
 def CurrentPoseCallback(msg):
 	global lastGoalMsg
 
-	if IsInRange(msg.pose.pose.position.x, lastGoal.pose.pose.position.x, 1) and IsInRange(msg.pose.pose.position.y, lastGoal.pose.pose.position.y, 1):
+	if IsInRange(msg.pose.pose.position.x, lastGoal.pose.pose.position.x, 0.5) and IsInRange(msg.pose.pose.position.y, lastGoal.pose.pose.position.y, 0.5):
 		print("Goal reached!")
 
 # Callback method for checking the initial pose set on move_base
@@ -327,6 +360,19 @@ def InitialPoseCallback(msg):
 	print(lastGoalMsg.pose.pose.orientation)
 	print("Initial pose")
 	print(msg.pose.pose.orientation)
+
+def OpenMvInputCallBack(msg):
+	global lastOpenMvMsg
+	global lastPoseMsgUpdate
+
+	lastOpenMvMsg = tuple((
+	float(msg.split(",")[0]),
+	float(msg.split(",")[1]),
+	msg.split(",")[2]
+	))
+
+	if lastOpenMvMsg[0] > 0 and ((time.time() - lastPoseMsgUpdate) < 5):
+		SetPose(GetPose(tagLocations.get(lastOpenMvMsg[0], (0.0, 0.0, 0.0))))
 	
 
 
@@ -343,6 +389,7 @@ zoneTopic = rospy.Subscriber("brain_change_zone", Int32, ExecuteChangeZone)
 motorTopic = rospy.Publisher("cmd_vel", Twist, queue_size=25)
 goalTopic = rospy.Publisher("move_base/goal", MoveBaseActionGoal,queue_size=25)
 cancelTopic = rospy.Publisher("move_base/cancel", GoalID, queue_size=25)
+initialposeTopic = rospy.Publisher("initialpose", PoseWithCovarianceStamped, queue_size=25)
 
 # Subscribers
 statusTopic = rospy.Subscriber("move_base/status", GoalStatusArray, StatusUpdate)
@@ -353,6 +400,7 @@ joystickTopic = rospy.Subscriber("cmd_vel_joy", Twist, JoystickInputCallback)
 emergencyTopic = rospy.Subscriber("emergency", Bool, EmergencyInputCallback)
 socialInteractionTopic = rospy.Subscriber("interaction/is_active", Int32, SocialInteractionIsActiveCallback)
 humanDetectionTopic = rospy.Subscriber("human_dect", String, HumanDetectionInputCallback)
+openmvTopic = rospy.Subscriber("openmv_apriltag", String , OpenMvInputCallBack)
 
 
 # Build tag location dictionary
