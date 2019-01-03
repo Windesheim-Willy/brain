@@ -131,7 +131,7 @@ def HandlerStateHumanControl():
     global lastJoystickMsg
 
     print("Willy is listening to human controls")
-    motorTopic.publish(lastJoystickMsg)
+    motorTopic.publish(GetSpeed(lastJoystickMsg))
 
 # Handler while in State.SocialInteraction
 def HandleSocialInteraction():
