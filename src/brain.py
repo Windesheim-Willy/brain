@@ -83,6 +83,7 @@ lastJoystickMsgUpdate = float(0)
 lastHumanDetectionUpdate = float(0)
 lastPoseMsgUpdate = float(0)
 lastEmergencyMsg = Bool()
+lastCurrentPose = PoseWithCovarianceStamped()
 slowDown = False
 socialInteractionActive = False
 
@@ -253,8 +254,8 @@ def GetPose(orientation, location):
 	radians = (math.pi/180) * degrees
 	poseMessage.pose.pose.orientation.x = 0.0
 	poseMessage.pose.pose.orientation.y = 0.0
-	poseMessage.pose.pose.orientation.z = math.cos(radians/2)
-	poseMessage.pose.pose.orientation.w = 1
+	poseMessage.pose.pose.orientation.z = lastCurrentPose.pose.pose.orientation.z # math.cos(radians/2)
+	poseMessage.pose.pose.orientation.w = lastCurrentPose.pose.pose.orientation.w # 1
 
 	poseMessage.pose.covariance = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 			0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 			0.0, 0.0]
 
@@ -377,6 +378,9 @@ def HumanDetectionInputCallback(msg):
 # Callback method for checking the current pose of willy
 def CurrentPoseCallback(msg):
 	global lastGoalMsg
+	global lastCurrentPose
+
+	lastCurrentPose = msg
 
 	if IsInRange(msg.pose.pose.position.x, lastGoalMsg.goal.target_pose.pose.position.x, 0.5) and IsInRange(msg.pose.pose.position.y, lastGoalMsg.goal.target_pose.pose.position.y, 0.5):
 		print("Goal reached!")
