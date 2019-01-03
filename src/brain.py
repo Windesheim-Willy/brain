@@ -264,8 +264,9 @@ def GetPose(orientation, location):
 def SetPose(pose):
 	global lastPoseMsgUpdate
 
-	lastPoseMsgUpdate = time.time()
-	initialTopic.publish(pose)
+	if pose.pose.position.x > 0 and pose.pose.position.y > 0:
+		lastPoseMsgUpdate = time.time()
+		initialTopic.publish(pose)
 
 	print(pose)
 	print("Initial pose set")
