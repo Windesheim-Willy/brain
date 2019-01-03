@@ -82,6 +82,7 @@ lastJoystickMsg = Twist()
 lastJoystickMsgUpdate = float(0)
 lastHumanDetectionUpdate = float(0)
 lastPoseMsgUpdate = float(0)
+lastAutonomousGoalMsgUpdate = float(0)
 lastEmergencyMsg = Bool()
 lastCurrentPose = PoseWithCovarianceStamped()
 slowDown = False
@@ -324,7 +325,15 @@ def CancelGoals():
 
 # Starts autonomous movement
 def SetAutonomousMovementGoal():
-    SetGoal(GetGoal(GetLocation(random.randint(0, len(tagLocations)-1))))	
+	global lastAutonomousGoalMsgUpdate
+	print("Request for autonomous goal")
+
+	if (time.time() - lastAutonomousGoalMsgUpdate) >= 5 or lastAutonomousGoalMsgUpdate == 0:
+		print("Set new autonomous goal")
+		tempGoal = GetGoal(GetLocation(random.randint(0, len(tagLocations)-1)))	
+		print(tempGoal)
+		SetGoal(tempGoal)
+		lastAutonomousGoalMsgUpdate = time.time()
 
 # Start zone movement
 def SetZoneMovementGoal():
@@ -410,13 +419,9 @@ def OpenMvInputCallBack(msg):
 	msg.data.split(",")[2]
 	))
 
-	if lastPoseMsgUpdate == 0:
-		lastPoseMsgUpdate = time.time() + 5
-		print("Id: %i" % lastOpenMvMsg[0])
-		print("Initial pose time set")
-
-	if lastOpenMvMsg[0] > 0 and (time.time() - lastPoseMsgUpdate) >= 5:
+	if lastOpenMvMsg[0] > 0 and (time.time() - lastPoseMsgUpdate) >= 5 or lastPoseMsgUpdate == 0:
 		SetPose(GetPose(lastOpenMvMsg[1], tagLocations.get(lastOpenMvMsg[0], (0.0, 0.0, 0.0))))
+		lastPoseMsgUpdate = time.time()
 	
 
 
