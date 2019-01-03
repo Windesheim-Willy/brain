@@ -237,7 +237,7 @@ def GetRandomLocation():
     index = random.randint(0,len(tagLocations)-1)
     return tagLocations.values()[index]
 
-def GetPose(location):
+def GetPose(orientation, location):
 	poseMessage = PoseWithCovarianceStamped()
 
 	poseMessage.header.seq = 0
@@ -248,7 +248,7 @@ def GetPose(location):
 	poseMessage.pose.pose.position.y = location[1]
 	poseMessage.pose.pose.position.z = 0.0
 
-	degrees = aprilTag[1] + 90
+	degrees = orientation + 90
 	degrees = (degrees % 360 + 360) % 360;
 	radians = (math.pi/180) * degrees
 	poseMessage.pose.pose.orientation.x = 0.0
@@ -411,9 +411,9 @@ def OpenMvInputCallBack(msg):
 	print("Delta time %i" % (time.time() - lastPoseMsgUpdate))
 	
 
-	if lastOpenMvMsg[0] > 0 and (time.time() - lastPoseMsgUpdate) >= 5:
+	if lastOpenMvMsg[0] > 0 and (time.time() - lastPoseMsgUpdate) > 5:
 		print("Set inital pose!")
-		SetPose(GetPose(tagLocations.get(lastOpenMvMsg[0], (0.0, 0.0, 0.0))))
+		SetPose(GetPose(lastOpenMvMsg[1], tagLocations.get(lastOpenMvMsg[0], (0.0, 0.0, 0.0))))
 	
 
 
