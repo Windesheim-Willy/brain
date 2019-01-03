@@ -388,14 +388,22 @@ def InitialPoseCallback(msg):
 	print(msg.pose.pose.orientation)
 
 def OpenMvInputCallBack(msg):
+
+	print("OpenMv input")
+	print(msg)
+
 	global lastOpenMvMsg
 	global lastPoseMsgUpdate
+
+
 
 	lastOpenMvMsg = tuple((
 	float(msg.data.split(",")[0]),
 	float(msg.data.split(",")[1]),
 	msg.data.split(",")[2]
 	))
+
+	print("Id: %s" % lastOpenMvMsg)
 
 	if lastOpenMvMsg[0] > 0 and ((time.time() - lastPoseMsgUpdate) < 5):
 		SetPose(GetPose(tagLocations.get(lastOpenMvMsg[0], (0.0, 0.0, 0.0))))
