@@ -77,6 +77,7 @@ currentZone = Zone.All
 movebaseStatus = GoalStatusArray()
 lastOpenMvMsg = tuple()
 lastGoalMsg = MoveBaseActionGoal()
+lastGoalId = 0
 lastMoveBaseMsg = Twist()
 lastJoystickMsg = Twist()
 lastJoystickMsgUpdate = float(0)
@@ -275,24 +276,27 @@ def SetPose(pose):
 
 # Returns a MoveBasGoal by location
 def GetGoal(location):
-    goal = MoveBaseActionGoal()
+	global lastGoalId 
 
-    goal.header.seq = 0
-    goal.header.frame_id = "map" 
-    goal.header.stamp.secs = rospy.get_rostime().secs 
-    goal.header.stamp.nsecs = rospy.get_rostime().nsecs
-    goal.goal_id.stamp = rospy.get_rostime()
-    goal.goal_id.id = "goal" 
-    goal.goal.target_pose.header.seq = 0
-    goal.goal.target_pose.header.stamp.secs = rospy.get_rostime().secs 
-    goal.goal.target_pose.header.stamp.nsecs = rospy.get_rostime().nsecs
-    goal.goal.target_pose.header.frame_id = "map"
-    goal.goal.target_pose.pose.position.x = location[0]
-    goal.goal.target_pose.pose.position.y = location[1] 
-    goal.goal.target_pose.pose.position.z = 0.0
-    goal.goal.target_pose.pose.orientation.w = 1.0
+	lastGoalId = location[0]
+	goal = MoveBaseActionGoal()
+
+	goal.header.seq = 0
+	goal.header.frame_id = "map" 
+	goal.header.stamp.secs = rospy.get_rostime().secs 
+	goal.header.stamp.nsecs = rospy.get_rostime().nsecs
+	goal.goal_id.stamp = rospy.get_rostime()
+	goal.goal_id.id = "goal" 
+	goal.goal.target_pose.header.seq = 0
+	goal.goal.target_pose.header.stamp.secs = rospy.get_rostime().secs 
+	goal.goal.target_pose.header.stamp.nsecs = rospy.get_rostime().nsecs
+	goal.goal.target_pose.header.frame_id = "map"
+	goal.goal.target_pose.pose.position.x = location[0]
+	goal.goal.target_pose.pose.position.y = location[1] 
+	goal.goal.target_pose.pose.position.z = 0.0
+	goal.goal.target_pose.pose.orientation.w = 1.0
 	
-    return goal
+	return goal
 
 # Returns the desirable speed of a Twist message
 def GetSpeed(msg):
@@ -311,12 +315,14 @@ def SetRandomGoal():
 
 # Publish a goal on the move_base/goal topic
 def SetGoal(goal):
-    global lastGoalMsg
+	global lastGoalMsg
+	global lastGoalId
 
-    CancelGoals()
-    lastGoalMsg = goal
-    goalTopic.publish(goal)
-    print("Goal set")
+	CancelGoals()
+	lastGoalMsg = goal
+	goalTopic.publish(goal)
+	print("Goal set")
+	print("Goal id: %s" % lastGoalId)
 
 # Publish a cancelevent to the move_base/cancel
 def CancelGoals():
