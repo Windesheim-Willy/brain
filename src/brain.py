@@ -265,7 +265,9 @@ def SetPose(pose):
 	global lastPoseMsgUpdate
 
 	lastPoseMsgUpdate = time.time()
-	initialposeTopic.publish(pose)
+	initialTopic.publish(pose)
+
+	print(pose)
 	print("Initial pose set")
 
 # Returns a MoveBasGoal by location
@@ -408,11 +410,7 @@ def OpenMvInputCallBack(msg):
 		print("Id: %i" % lastOpenMvMsg[0])
 		print("Initial pose time set")
 
-	print("Delta time %i" % (time.time() - lastPoseMsgUpdate))
-	
-
 	if lastOpenMvMsg[0] > 0 and (time.time() - lastPoseMsgUpdate) > 5:
-		print("Set inital pose!")
 		SetPose(GetPose(lastOpenMvMsg[1], tagLocations.get(lastOpenMvMsg[0], (0.0, 0.0, 0.0))))
 	
 
@@ -430,7 +428,7 @@ zoneTopic = rospy.Subscriber("brain_change_zone", Int32, ExecuteChangeZone)
 motorTopic = rospy.Publisher("cmd_vel", Twist, queue_size=25)
 goalTopic = rospy.Publisher("move_base/goal", MoveBaseActionGoal,queue_size=25)
 cancelTopic = rospy.Publisher("move_base/cancel", GoalID, queue_size=25)
-initialposeTopic = rospy.Publisher("initialpose", PoseWithCovarianceStamped, queue_size=25)
+initialTopic = rospy.Publisher("initialpose", PoseWithCovarianceStamped, queue_size=25)
 
 # Subscribers
 statusTopic = rospy.Subscriber("move_base/status", GoalStatusArray, StatusUpdate)
@@ -466,6 +464,7 @@ tagLocations = {1:(13.489720850756148, 60.59727947971955, 0.0),
 19:(16.299067248414662, 55.46434990288788, 0.0),
 20:(12.100164063844309, 55.42996574075256, 0.0),
 21:(9.65735918277374, 55.445542959329764, 0.0),
+24:(6.65735918277374, 55.445542959329764, 0.0),
 30:(32.8987473161705, 46.41308688279322, 0.0),
 31:(33.121147889528785, 43.20021335735613, 0.0),
 32:(32.49671958337161, 39.21247637139029, 0.0),
