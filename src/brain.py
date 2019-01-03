@@ -163,7 +163,7 @@ def UpdateState():
 	humanTakeover = (time.time() - lastJoystickMsgUpdate) < 5
 
 	# if no human detected within 5 seconds, go back to normal speed
-	slowDown = ((time.time() - lastHumanDetectionUpdate)  < 5)
+	slowDown = (time.time() - lastHumanDetectionUpdate)  < 5
 
 	if lastEmergencyMsg.data == True:
 		HandleTransition(currentState, State.Emergency)
