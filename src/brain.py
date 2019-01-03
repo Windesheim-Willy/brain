@@ -407,10 +407,12 @@ def OpenMvInputCallBack(msg):
 		lastPoseMsgUpdate = time.time()
 		print("Id: %i" % lastOpenMvMsg[0])
 		print("Initial pose time set")
-		print("Delta time %i" % (time.time() - lastPoseMsgUpdate))
+
+	print("Delta time %i" % (time.time() - lastPoseMsgUpdate))
 	
 
 	if lastOpenMvMsg[0] > 0 and (time.time() - lastPoseMsgUpdate) < 5:
+		print("Set inital pose!")
 		SetPose(GetPose(tagLocations.get(lastOpenMvMsg[0], (0.0, 0.0, 0.0))))
 	
 
