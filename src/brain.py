@@ -58,6 +58,19 @@ class MoveBaseStatus:
 	Lost            = 9   # An action client can determine that a goal is LOST. This should not be
                             #    sent over the wire by an action server
 
+rhumbs = [
+    (0,"N"),
+    (45,"NE"),
+    (90,"E"),
+    (135,"SE"),
+    (180,"S"),
+    (225,"SW"),
+    (270,"W"),
+    (315,"NW"),
+    (360,"N")
+    ]
+
+
 ########################## Globals ############################
 currentState = State.Autonomous
 currentZone = Zone.All
@@ -75,11 +88,18 @@ socialInteractionActive = False
 
 ########################## Methods ############################ 
 
+# Checks if a given number a is within a given range of number b
 def IsInRange(a, b, margin):
     if(a < b+margin and a > b-margin):
         return True
     else:
         return False
+
+# Retrieves a rhumb based on rotation angle
+def GetRhumb(rotation):
+    for key, value in rhumbs:
+        if(IsInRange(rotation, key)):
+            return value
 
 # Handler while in State.Autonomous
 def HandleStateAutonomous():
@@ -304,11 +324,17 @@ def SetAutonomousMovementGoal():
 
 # Start zone movement
 def SetZoneMovementGoal():
-    rangeLength = (len(tagLocations)-1)/3
-    rangeMin = (currentZone * rangeLength) - rangeLength
-    rangeMax = (currentZone * rangeLength)
-    index = random.randint(rangeMin, rangeMax)
-    SetGoal(GetGoal(GetLocation(index)))
+	global currentZone
+
+	if currentZone == Zone.T5Yellow:		
+		index = random.randint(1, 21)
+	elif currentZone == Zone.T5Bridge:
+		index = random.randint(30, 36)
+	elif currentZone == Zone.T5Red:
+		random.randint(50, 69)
+	else:	
+		random.randint(0, len(tagLocations)-1)
+	SetGoal(GetGoal(GetLocation(index)))
 
 # Callback method for joystick topic
 def JoystickInputCallback(msg):
@@ -404,8 +430,7 @@ openmvTopic = rospy.Subscriber("openmv_apriltag", String , OpenMvInputCallBack)
 
 
 # Build tag location dictionary
-tagLocations = {
-1:(13.489720850756148, 60.59727947971955, 0.0),
+tagLocations = {1:(13.489720850756148, 60.59727947971955, 0.0),
 2:(15.934169265195797, 60.933202561559746, 0.0),
 3:(20.810319786490506, 60.41751882276302, 0.0),
 4:(24.50055443446291, 60.43755116603776, 0.0),
@@ -426,8 +451,30 @@ tagLocations = {
 19:(16.299067248414662, 55.46434990288788, 0.0),
 20:(12.100164063844309, 55.42996574075256, 0.0),
 21:(9.65735918277374, 55.445542959329764, 0.0),
-24:(10.65735918277374, 55.445542959329764, 0.0),
-528:(43.65193339638883, 60.123809610098775, 0.0)
+30:(32.8987473161705, 46.41308688279322, 0.0),
+31:(33.121147889528785, 43.20021335735613, 0.0),
+32:(32.49671958337161, 39.21247637139029, 0.0),
+33:(32.599678125770374, 36.425429080274895, 0.0),
+34:(32.55513317780795, 32.79463316478886, 0.0),
+35:(32.50853311136147, 27.368573944379868, 0.0),
+36:(32.409127602788864, 22.26660430671845, 0.0),
+50:(13.523372347566175, 17.066372999587333, 0.0),
+51:(16.06199102201768, 16.56837403740275, 0.0),
+52:(19.256179603045823, 16.34236774262965, 0.0),
+53:(24.36634090774053, 16.67868658773296, 0.0),
+54:(29.377547116503376, 16.51949373917632, 0.0),
+55:(30.2662528686185, 16.515290877639845, 0.0),
+56:(35.96912522489601, 16.546644310410148, 0.0),
+57:(36.951119660425995, 16.68705958913906, 0.0),
+60:(45.33510084675059, 11.802420096806053, 0.0),
+61:(25.04931102220155, 11.888528907096841, 0.0),
+62:(29.844263537020343, 11.897989352815346, 0.0),
+63:(34.33241676941428, 12.018177159286664, 0.0),
+64:(38.0079833762018, 12.007359945644666, 0.0),
+66:(22.139618917845695, 11.986272812183511, 0.0),
+67:(19.678538554314194, 11.909650528877101, 0.0),
+68:(15.507593016208999, 11.883949899592288, 0.0),
+69:(13.329357525172874, 12.035189725452817, 0.0)
 }
 
 # Heartbeat for this wonderfull brain
@@ -445,7 +492,7 @@ while not rospy.is_shutdown():
 	if currentState == State.MoveToTag:
 	    HandleMoveToTag()
 
-	print(slowDown)
+	print("Slowdown: %s" % slowDown)
     
 	sleep(0.1)
 
