@@ -276,9 +276,6 @@ def SetPose(pose):
 
 # Returns a MoveBasGoal by location
 def GetGoal(location):
-	global lastGoalId 
-
-	lastGoalId = location[0]
 	goal = MoveBaseActionGoal()
 
 	goal.header.seq = 0
@@ -332,12 +329,21 @@ def CancelGoals():
 # Starts autonomous movement
 def SetAutonomousMovementGoal():
 	global lastAutonomousGoalMsgUpdate
+	global lastGoalId
+
 	print("Request for autonomous goal")
 
 	if (time.time() - lastAutonomousGoalMsgUpdate) >= 5 or lastAutonomousGoalMsgUpdate == 0:
 		print("Set new autonomous goal")
-		tempGoal = GetGoal(GetLocation(random.randint(0, len(tagLocations)-1)))	
+		tempIndex = random.randint(0, len(tagLocations)-1)
+		tempLocation = GetLocation(tempIndex)
+		tempGoal = GetGoal(tempLocation)
+		lastGoalId = tempIndex
+
+		print("Last set goal: \n")
 		print(tempGoal)
+		print("Last set goalId: %s " % lastGoalId)
+
 		SetGoal(tempGoal)
 		lastAutonomousGoalMsgUpdate = time.time()
 
