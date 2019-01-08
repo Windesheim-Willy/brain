@@ -14,7 +14,7 @@ from geometry_msgs.msg import PoseWithCovarianceStamped, Twist, Point32
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionGoal
 from actionlib_msgs.msg import GoalID, GoalStatusArray
 from dynamic_reconfigure.parameter_generator import *
-from human_detection.msg import Person
+
 
 
 
@@ -112,9 +112,12 @@ def HandleStateAutonomous():
 
 	print("Willy is autonomous driving!")
 
-
+	print("Debug movebaseStatus")
+	print(movebaseStatus)
 
 	if len(movebaseStatus.status_list) <= 0 or movebaseStatus.status_list[0].status == MoveBaseStatus.Succeeded:
+		print("No goal or goal succeeded, select new goal")
+		print("Current zone = %s" % currentZone)
 		if currentZone == Zone.All:
 			SetAutonomousMovementGoal()
 		else:
@@ -318,7 +321,8 @@ def SetGoal(goal):
 	CancelGoals()
 	lastGoalMsg = goal
 	goalTopic.publish(goal)
-	print("Goal set")
+	print("Goal published on topic: move_base/goal")
+	print(goal)
 	print("Goal id: %s" % lastGoalId)
 
 # Publish a cancelevent to the move_base/cancel
