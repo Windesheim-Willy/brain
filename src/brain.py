@@ -110,18 +110,22 @@ def HandleStateAutonomous():
 	global movebaseStatus
 	global currentZone
 
-	print("Willy is autonomous driving!")
-
-	print("Debug movebaseStatus")
-	print(movebaseStatus)
-
 	if len(movebaseStatus.status_list) <= 0 or movebaseStatus.status_list[0].status == MoveBaseStatus.Succeeded:
-		print("No goal or goal succeeded, select new goal")
-		print("Current zone = %s" % currentZone)
-		if currentZone == Zone.All:
-			SetAutonomousMovementGoal()
+		if (time.time() - lastAutonomousGoalMsgUpdate) >= 5 or lastAutonomousGoalMsgUpdate == 0:
+			print("No goal set or goal succeeded, select new goal")
+			print("Current zone = %s" % currentZone)
+			if currentZone == Zone.All:
+				SetAutonomousMovementGoal()
+			else:
+				SetZoneMovementGoal()
 		else:
-			SetZoneMovementGoal()
+			print("No goal set, waiting %d sec before selecting new goal" % (5 -(time.time() - lastAutonomousGoalMsgUpdate)))
+	elif len(movebaseStatus.status_list) > 0 and movebaseStatus.status_list[0].status == MoveBaseStatus.Pending:
+		print("Goal is set, but still pending")
+	elif len(movebaseStatus.status_list) > 0 and movebaseStatus.status_list[0].status == MoveBaseStatus.Active:
+		print("Willy is autonomous driving!")
+		print("Current movebaseStatus: ")
+		print(movebaseStatus)
 	motorTopic.publish(GetSpeed(lastMoveBaseMsg))
 
 
@@ -336,20 +340,18 @@ def SetAutonomousMovementGoal():
 	global lastGoalId
 
 	print("Request for autonomous goal")
+	print("Set new autonomous goal")
+	tempIndex = random.randint(0, len(tagLocations)-1)
+	tempLocation = GetLocation(tempIndex)
+	tempGoal = GetGoal(tempLocation)
+	lastGoalId = tempIndex
 
-	if (time.time() - lastAutonomousGoalMsgUpdate) >= 5 or lastAutonomousGoalMsgUpdate == 0:
-		print("Set new autonomous goal")
-		tempIndex = random.randint(0, len(tagLocations)-1)
-		tempLocation = GetLocation(tempIndex)
-		tempGoal = GetGoal(tempLocation)
-		lastGoalId = tempIndex
+	print("Last set goal: \n")
+	print(tempGoal)
+	print("Last set goalId: %s " % lastGoalId)
 
-		print("Last set goal: \n")
-		print(tempGoal)
-		print("Last set goalId: %s " % lastGoalId)
-
-		SetGoal(tempGoal)
-		lastAutonomousGoalMsgUpdate = time.time()
+	SetGoal(tempGoal)
+	lastAutonomousGoalMsgUpdate = time.time()
 
 # Start zone movement
 def SetZoneMovementGoal():
