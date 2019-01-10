@@ -134,13 +134,12 @@ def HandleStateAutonomous():
 				SetZoneMovementGoal()
 		else:
 			print("No goal set, waiting %d sec before selecting new goal" % (5 -(time.time() - lastAutonomousGoalMsgUpdate)))
-			print(movebaseStatus)
 	elif len(movebaseStatus.status_list) > 0 and movebaseStatus.status_list[0].status == MoveBaseStatus.Pending:
-		print("Goal is set, but still pending")
+		Print("Goal is set, but still pending")
 	elif len(movebaseStatus.status_list) > 0 and movebaseStatus.status_list[0].status == MoveBaseStatus.Active:
-		print("Willy is autonomous driving!")
-		print("Current movebaseStatus: ")
-		print(movebaseStatus)
+		Print("Willy is autonomous driving!")
+		Print("Current movebaseStatus: ")
+		Print(movebaseStatus)
 
 	Print("Handle state autonomous, lastMoveBaseMsg:")
 	Print(lastMoveBaseMsg)
