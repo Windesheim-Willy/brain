@@ -134,6 +134,7 @@ def HandleStateAutonomous():
 				SetZoneMovementGoal()
 		else:
 			print("No goal set, waiting %d sec before selecting new goal" % (5 -(time.time() - lastAutonomousGoalMsgUpdate)))
+			print(movebaseStatus)
 	elif len(movebaseStatus.status_list) > 0 and movebaseStatus.status_list[0].status == MoveBaseStatus.Pending:
 		print("Goal is set, but still pending")
 	elif len(movebaseStatus.status_list) > 0 and movebaseStatus.status_list[0].status == MoveBaseStatus.Active:
@@ -141,39 +142,39 @@ def HandleStateAutonomous():
 		print("Current movebaseStatus: ")
 		print(movebaseStatus)
 
-	print("Handle state autonomous, lastMoveBaseMsg:")
-	print(lastMoveBaseMsg)
+	Print("Handle state autonomous, lastMoveBaseMsg:")
+	Print(lastMoveBaseMsg)
 	motorTopic.publish(GetSpeed(lastMoveBaseMsg))
 
 
 # Handler while in State.Emergency
 def HandlerStateEmergency():
-    print("Willy is in a state of emergency")
+    Print("Willy is in a state of emergency")
     motorTopic.publish(Twist())
 
 # Handler while in State.HumanControl
 def HandlerStateHumanControl():
     global lastJoystickMsg
 
-    print("Willy is listening to human controls")
+    Print("Willy is listening to human controls")
     motorTopic.publish(GetSpeed(lastJoystickMsg))
 
 # Handler while in State.SocialInteraction
 def HandleSocialInteraction():
-    print("Willy is talking to someone")
+    Print("Willy is talking to someone")
     motorTopic.publish(Twist())
 
 # Handler while in State.MoveToTag
 def HandleMoveToTag():
     global lastMoveBaseMsg
     
-    print("Willy is moving to a specific location")
+    Print("Willy is moving to a specific location")
 
     motorTopic.publish(GetSpeed(lastMoveBaseMsg))
 
 # This function is called when willy transitions from one state to another
 def HandleTransition(currentState, newState):
-    print("Willy is going from state " + str(currentState) + " to state "+ str(newState))
+    Print("Willy is going from state " + str(currentState) + " to state "+ str(newState))
     
 
 def UpdateState():
@@ -184,7 +185,7 @@ def UpdateState():
 	global socialInteractionActive
 	global slowDown
 
-	print ("Should willy change state?")
+	Print ("Should willy change state?")
     
     # if human input has been recieved within 5 seconds, a human is trying to take over
 	humanTakeover = (time.time() - lastJoystickMsgUpdate) < 5
@@ -251,7 +252,7 @@ def ExecuteChangeZone(msg):
 def EmergencyInputCallback(msg):
 	global lastEmergencyMsg
 
-	print("Got emergency bool update")
+	Print("Got emergency bool update")
 	lastEmergencyMsg = msg
 	
 
