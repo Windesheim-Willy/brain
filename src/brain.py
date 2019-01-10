@@ -124,13 +124,7 @@ def HandleStateAutonomous():
 	global movebaseStatus
 	global currentZone
 
-	if len(movebaseStatus.status_list) > 0:
-		print("First item:")
-		print(movebaseStatus.status_list[0])
-		print("Last item:")
-		print(movebaseStatus.status_list[-1])
-
-	if len(movebaseStatus.status_list) <= 0 or movebaseStatus.status_list[0].status in [MoveBaseStatus.Succeeded, MoveBaseStatus.Aborted, MoveBaseStatus.Preempted]: 
+	if len(movebaseStatus.status_list) <= 0 or movebaseStatus.status_list[-1].status in [MoveBaseStatus.Succeeded, MoveBaseStatus.Aborted, MoveBaseStatus.Preempted]: 
 		if (time.time() - lastAutonomousGoalMsgUpdate) >= 5 or lastAutonomousGoalMsgUpdate == 0:
 			print("No goal set or goal succeeded, select new goal")
 			print("Current zone = %s" % currentZone)
@@ -140,9 +134,9 @@ def HandleStateAutonomous():
 				SetZoneMovementGoal()
 		else:
 			print("No goal set, waiting %d sec before selecting new goal" % (5 -(time.time() - lastAutonomousGoalMsgUpdate)))
-	elif len(movebaseStatus.status_list) > 0 and movebaseStatus.status_list[0].status == MoveBaseStatus.Pending:
+	elif len(movebaseStatus.status_list) > 0 and movebaseStatus.status_list[-1].status == MoveBaseStatus.Pending:
 		Print("Goal is set, but still pending")
-	elif len(movebaseStatus.status_list) > 0 and movebaseStatus.status_list[0].status == MoveBaseStatus.Active:
+	elif len(movebaseStatus.status_list) > 0 and movebaseStatus.status_list[-1].status == MoveBaseStatus.Active:
 		Print("Willy is autonomous driving!")
 		Print("Current movebaseStatus: ")
 		Print(movebaseStatus)
