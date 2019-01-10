@@ -75,6 +75,8 @@ rhumbs = [
 currentState = State.Autonomous
 currentZone = Zone.All
 movebaseStatus = GoalStatusArray()
+lastPrintMsg = ""
+lastPrintDelay = 2
 lastOpenMvMsg = tuple()
 lastGoalMsg = MoveBaseActionGoal()
 lastGoalId = 0
@@ -84,6 +86,7 @@ lastJoystickMsgUpdate = float(0)
 lastHumanDetectionUpdate = float(0)
 lastPoseMsgUpdate = float(0)
 lastAutonomousGoalMsgUpdate = float(0)
+lastPrintMsgUpdate = float(0)
 lastEmergencyMsg = Bool()
 lastCurrentPose = PoseWithCovarianceStamped()
 slowDown = False
@@ -91,6 +94,17 @@ socialInteractionActive = False
 
 ########################## Methods ############################ 
 
+# Print with particular message delay
+def Print(msg):
+	global lastPrintDelay
+	global lastPrintMsg
+	global lastPrintMsgUpdate
+
+	if(time.time() - lastPrintMsgUpdate) >= lastPrintDelay or lastPrintMsgUpdate == 0 or lastPrintMsg != msg:
+		print(msg)
+		lastPrintMsg = msg
+		lastPrintMsgUpdate = time.time()
+	
 # Checks if a given number a is within a given range of number b
 def IsInRange(a, b, margin):
     if(a < b+margin and a > b-margin):
@@ -331,10 +345,7 @@ def SetGoal(goal):
 	print("Goal published on topic: move_base/goal")
 	print(goal)
 	print("Goal id: %s" % lastGoalId)
-	sleep(25)
-	time.sleep(25)
 	
-
 # Publish a cancelevent to the move_base/cancel
 def CancelGoals():
     cancelTopic.publish(GoalID())
@@ -378,7 +389,7 @@ def JoystickInputCallback(msg):
     global lastJoystickMsgUpdate
     global lastJoystickMsg
 
-    print("Got joystick input")
+    Print("Got joystick input")
     lastJoystickMsg = msg
     lastJoystickMsgUpdate = time.time()
 
@@ -386,7 +397,7 @@ def JoystickInputCallback(msg):
 def MoveBaseInputCallback(msg):
     global lastMoveBaseMsg
 
-    print("Got move_base cmd vel update")
+    Print("Got move_base cmd vel update")
     lastMoveBaseMsg = msg
 
 # Callback method for social interaction is active topic
@@ -406,7 +417,7 @@ def HumanDetectionInputCallback(msg):
 		if data[2] < 250:
 			slowDown = True
 			lastHumanDetectionUpdate = time.time()
-			print("Human detected, slow down")
+			Print("Human detected, slow down")
 
 # Callback method for checking the current pose of willy
 def CurrentPoseCallback(msg):
@@ -422,15 +433,15 @@ def CurrentPoseCallback(msg):
 def InitialPoseCallback(msg):
 	global lastGoalMsg
 
-	print("Current pose")
-	print(lastGoalMsg.goal.target_pose.pose.orientation)
-	print("Initial pose")
-	print(msg.pose.pose.orientation)
+	Print("Current pose")
+	Print(lastGoalMsg.goal.target_pose.pose.orientation)
+	Print("Initial pose")
+	Print(msg.pose.pose.orientation)
 
 def OpenMvInputCallBack(msg):
 
-	print("OpenMv input")
-	print(msg)
+	Print("OpenMv input")
+	Print(msg)
 
 	global lastOpenMvMsg
 	global lastPoseMsgUpdate
@@ -540,7 +551,7 @@ while not rospy.is_shutdown():
 	if currentState == State.MoveToTag:
 	    HandleMoveToTag()
 
-	print("Slowdown: %s" % slowDown)
+	Print("Slowdown: %s" % slowDown)
     
 	sleep(0.1)
 
