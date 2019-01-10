@@ -323,6 +323,10 @@ def GetGoal(location):
 def GetSpeed(msg):
 	if slowDown:
 		msg.linear.x /= 2
+		if msg.linear.x > 0 and msg.linear.x < 0.3:
+			msg.linear.x = 0.3
+		if msg.linear.x < 0 and msg.linear.x > -0.3:
+			msg.linear.x = -0.3
 	return msg
 
 # Returns a MoveBaseGoal with a random location
