@@ -308,7 +308,7 @@ def GetGoal(location):
 	goal.header.stamp.secs = rospy.get_rostime().secs 
 	goal.header.stamp.nsecs = rospy.get_rostime().nsecs
 	goal.goal_id.stamp = rospy.get_rostime()
-	goal.goal_id.id = "goal" 
+	goal.goal_id.id = "goal|"+ str(time.time())
 	goal.goal.target_pose.header.seq = 0
 	goal.goal.target_pose.header.stamp.secs = rospy.get_rostime().secs 
 	goal.goal.target_pose.header.stamp.nsecs = rospy.get_rostime().nsecs
