@@ -124,7 +124,7 @@ def HandleStateAutonomous():
 	global movebaseStatus
 	global currentZone
 
-	if len(movebaseStatus.status_list) <= 0 or movebaseStatus.status_list[0].status == MoveBaseStatus.Succeeded:
+	if len(movebaseStatus.status_list) <= 0 or movebaseStatus.status_list[0].status == MoveBaseStatus.Succeeded or movebaseStatus.status_list[0].status == MoveBaseStatus.Aborted:
 		if (time.time() - lastAutonomousGoalMsgUpdate) >= 5 or lastAutonomousGoalMsgUpdate == 0:
 			print("No goal set or goal succeeded, select new goal")
 			print("Current zone = %s" % currentZone)
