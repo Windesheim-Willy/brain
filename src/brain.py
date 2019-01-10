@@ -331,7 +331,9 @@ def SetGoal(goal):
 	print("Goal published on topic: move_base/goal")
 	print(goal)
 	print("Goal id: %s" % lastGoalId)
-	sleep(5)
+	sleep(25)
+	time.sleep(25)
+	
 
 # Publish a cancelevent to the move_base/cancel
 def CancelGoals():
