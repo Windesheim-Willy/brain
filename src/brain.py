@@ -404,6 +404,7 @@ def MoveBaseInputCallback(msg):
 def SocialInteractionIsActiveCallback(msg):
 	global socialInteractionActive
 	if msg.data == 1 :
+		Print("Social interaction active")
 		socialInteractionActive = True
 	else:
 		socialInteractionActive = False
