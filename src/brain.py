@@ -15,9 +15,6 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionGoal
 from actionlib_msgs.msg import GoalID, GoalStatusArray
 from dynamic_reconfigure.parameter_generator import *
 
-
-
-
 ########################## Enums ############################
 
 class Command:
@@ -100,7 +97,7 @@ def Print(msg):
 	global lastPrintMsg
 	global lastPrintMsgUpdate
 
-	if(time.time() - lastPrintMsgUpdate) >= lastPrintDelay or lastPrintMsgUpdate == 0 or lastPrintMsg != msg:
+	if(time.time() - lastPrintMsgUpdate) >= lastPrintDelay or lastPrintMsgUpdate == 0:
 		print(msg)
 		lastPrintMsg = msg
 		lastPrintMsgUpdate = time.time()
@@ -184,7 +181,7 @@ def UpdateState():
 	global socialInteractionActive
 	global slowDown
 
-	Print ("Should willy change state?")
+	Print("Should willy change state?")
     
     # if human input has been recieved within 5 seconds, a human is trying to take over
 	humanTakeover = (time.time() - lastJoystickMsgUpdate) < 5
