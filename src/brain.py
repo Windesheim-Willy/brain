@@ -210,8 +210,14 @@ def UpdateState():
 			HandleTransition(currentState, State.SocialInteraction)
 			currentState = State.SocialInteraction
 			return
+
 	if currentState == State.HumanControl:
 		if not humanTakeover:
+			HandleTransition(currentState, State.Autonomous)
+			currentState = State.Autonomous
+
+	if currentState == State.SocialInteraction:
+		if not socialInteractionActive:
 			HandleTransition(currentState, State.Autonomous)
 			currentState = State.Autonomous
     #TODO check if in range of move goal for tag
@@ -250,9 +256,7 @@ def ExecuteChangeZone(msg):
 def EmergencyInputCallback(msg):
 	global lastEmergencyMsg
 
-	Print("Got emergency bool update")
-	lastEmergencyMsg = msg
-	
+	lastEmergencyMsg = msg	
 
 # Returns a location by index
 def GetLocation(index):
@@ -392,7 +396,6 @@ def JoystickInputCallback(msg):
     global lastJoystickMsgUpdate
     global lastJoystickMsg
 
-    Print("Got joystick input")
     lastJoystickMsg = msg
     lastJoystickMsgUpdate = time.time()
 
@@ -400,7 +403,7 @@ def JoystickInputCallback(msg):
 def MoveBaseInputCallback(msg):
     global lastMoveBaseMsg
 
-    Print("Got move_base cmd vel update")
+    #Print("Got move_base cmd vel update")
     lastMoveBaseMsg = msg
 
 # Callback method for social interaction is active topic
@@ -444,13 +447,8 @@ def InitialPoseCallback(msg):
 
 def OpenMvInputCallBack(msg):
 
-	Print("OpenMv input")
-	Print(msg)
-
 	global lastOpenMvMsg
 	global lastPoseMsgUpdate
-
-
 
 	lastOpenMvMsg = tuple((
 	float(msg.data.split(",")[0]),
