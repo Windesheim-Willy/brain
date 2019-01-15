@@ -100,7 +100,7 @@ def Print(msg):
 	global lastPrintMsg
 	global lastPrintMsgUpdate
 
-	if(time.time() - lastPrintMsgUpdate) >= lastPrintDelay or lastPrintMsgUpdate == 0 or lastPrintMsg != msg:
+	if(time.time() - lastPrintMsgUpdate) >= lastPrintDelay or lastPrintMsgUpdate == 0: #or lastPrintMsg != msg:
 		print(msg)
 		lastPrintMsg = msg
 		lastPrintMsgUpdate = time.time()
