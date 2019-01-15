@@ -403,7 +403,6 @@ def JoystickInputCallback(msg):
 def MoveBaseInputCallback(msg):
     global lastMoveBaseMsg
 
-    #Print("Got move_base cmd vel update")
     lastMoveBaseMsg = msg
 
 # Callback method for social interaction is active topic
