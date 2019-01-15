@@ -445,7 +445,7 @@ def InitialPoseCallback(msg):
 	Print(msg.pose.pose.orientation)
 
 def OpenMvInputCallBack(msg):
-
+	global movebaseStatus
 	global lastOpenMvMsg
 	global lastPoseMsgUpdate
 
@@ -455,7 +455,7 @@ def OpenMvInputCallBack(msg):
 	msg.data.split(",")[2]
 	))
 
-	if lastOpenMvMsg[0] > 0 and (time.time() - lastPoseMsgUpdate) >= 5 or lastPoseMsgUpdate == 0:
+	if (lastOpenMvMsg[0] > 0 and (time.time() - lastPoseMsgUpdate) >= 5 and movebaseStatus.status_list[-1].status in [MoveBaseStatus.Aborted, MoveBaseStatus.Preempted]) or lastPoseMsgUpdate == 0:
 		SetPose(GetPose(lastOpenMvMsg[1], tagLocations.get(lastOpenMvMsg[0], (0.0, 0.0, 0.0))))
 		lastPoseMsgUpdate = time.time()
 	
