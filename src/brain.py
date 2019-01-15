@@ -76,7 +76,7 @@ currentState = State.Autonomous
 currentZone = Zone.All
 movebaseStatus = GoalStatusArray()
 lastPrintMsg = ""
-lastPrintDelay = 2
+lastPrintDelay = 0.5
 lastOpenMvMsg = tuple()
 lastGoalMsg = MoveBaseActionGoal()
 lastGoalId = 0
@@ -124,7 +124,7 @@ def HandleStateAutonomous():
 	global movebaseStatus
 	global currentZone
 
-	if len(movebaseStatus.status_list) <= 0 or movebaseStatus.status_list[0].status == MoveBaseStatus.Succeeded:
+	if len(movebaseStatus.status_list) <= 0 or movebaseStatus.status_list[-1].status in [MoveBaseStatus.Succeeded, MoveBaseStatus.Aborted, MoveBaseStatus.Preempted]: 
 		if (time.time() - lastAutonomousGoalMsgUpdate) >= 5 or lastAutonomousGoalMsgUpdate == 0:
 			print("No goal set or goal succeeded, select new goal")
 			print("Current zone = %s" % currentZone)
@@ -134,13 +134,12 @@ def HandleStateAutonomous():
 				SetZoneMovementGoal()
 		else:
 			print("No goal set, waiting %d sec before selecting new goal" % (5 -(time.time() - lastAutonomousGoalMsgUpdate)))
-			print(movebaseStatus)
-	elif len(movebaseStatus.status_list) > 0 and movebaseStatus.status_list[0].status == MoveBaseStatus.Pending:
-		print("Goal is set, but still pending")
-	elif len(movebaseStatus.status_list) > 0 and movebaseStatus.status_list[0].status == MoveBaseStatus.Active:
-		print("Willy is autonomous driving!")
-		print("Current movebaseStatus: ")
-		print(movebaseStatus)
+	elif len(movebaseStatus.status_list) > 0 and movebaseStatus.status_list[-1].status == MoveBaseStatus.Pending:
+		Print("Goal is set, but still pending")
+	elif len(movebaseStatus.status_list) > 0 and movebaseStatus.status_list[-1].status == MoveBaseStatus.Active:
+		Print("Willy is autonomous driving!")
+		Print("Current movebaseStatus: ")
+		Print(movebaseStatus)
 
 	Print("Handle state autonomous, lastMoveBaseMsg:")
 	Print(lastMoveBaseMsg)
@@ -185,8 +184,7 @@ def UpdateState():
 	global socialInteractionActive
 	global slowDown
 
-	Print ("Should willy change state?")
-    
+
     # if human input has been recieved within 5 seconds, a human is trying to take over
 	humanTakeover = (time.time() - lastJoystickMsgUpdate) < 5
 
@@ -212,8 +210,14 @@ def UpdateState():
 			HandleTransition(currentState, State.SocialInteraction)
 			currentState = State.SocialInteraction
 			return
+
 	if currentState == State.HumanControl:
 		if not humanTakeover:
+			HandleTransition(currentState, State.Autonomous)
+			currentState = State.Autonomous
+
+	if currentState == State.SocialInteraction:
+		if not socialInteractionActive:
 			HandleTransition(currentState, State.Autonomous)
 			currentState = State.Autonomous
     #TODO check if in range of move goal for tag
@@ -252,9 +256,7 @@ def ExecuteChangeZone(msg):
 def EmergencyInputCallback(msg):
 	global lastEmergencyMsg
 
-	Print("Got emergency bool update")
-	lastEmergencyMsg = msg
-	
+	lastEmergencyMsg = msg	
 
 # Returns a location by index
 def GetLocation(index):
@@ -308,7 +310,7 @@ def GetGoal(location):
 	goal.header.stamp.secs = rospy.get_rostime().secs 
 	goal.header.stamp.nsecs = rospy.get_rostime().nsecs
 	goal.goal_id.stamp = rospy.get_rostime()
-	goal.goal_id.id = "goal" 
+	goal.goal_id.id = "goal|"+ str(time.time())
 	goal.goal.target_pose.header.seq = 0
 	goal.goal.target_pose.header.stamp.secs = rospy.get_rostime().secs 
 	goal.goal.target_pose.header.stamp.nsecs = rospy.get_rostime().nsecs
@@ -324,6 +326,10 @@ def GetGoal(location):
 def GetSpeed(msg):
 	if slowDown:
 		msg.linear.x /= 2
+		if msg.linear.x > 0 and msg.linear.x < 0.3:
+			msg.linear.x = 0.3
+		if msg.linear.x < 0 and msg.linear.x > -0.3:
+			msg.linear.x = -0.3
 	return msg
 
 # Returns a MoveBaseGoal with a random location
@@ -390,7 +396,6 @@ def JoystickInputCallback(msg):
     global lastJoystickMsgUpdate
     global lastJoystickMsg
 
-    Print("Got joystick input")
     lastJoystickMsg = msg
     lastJoystickMsgUpdate = time.time()
 
@@ -398,13 +403,13 @@ def JoystickInputCallback(msg):
 def MoveBaseInputCallback(msg):
     global lastMoveBaseMsg
 
-    Print("Got move_base cmd vel update")
     lastMoveBaseMsg = msg
 
 # Callback method for social interaction is active topic
 def SocialInteractionIsActiveCallback(msg):
 	global socialInteractionActive
 	if msg.data == 1 :
+		Print("Social interaction active")
 		socialInteractionActive = True
 	else:
 		socialInteractionActive = False
@@ -441,13 +446,8 @@ def InitialPoseCallback(msg):
 
 def OpenMvInputCallBack(msg):
 
-	Print("OpenMv input")
-	Print(msg)
-
 	global lastOpenMvMsg
 	global lastPoseMsgUpdate
-
-
 
 	lastOpenMvMsg = tuple((
 	float(msg.data.split(",")[0]),
