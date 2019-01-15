@@ -15,6 +15,9 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal, MoveBaseActionGoal
 from actionlib_msgs.msg import GoalID, GoalStatusArray
 from dynamic_reconfigure.parameter_generator import *
 
+
+
+
 ########################## Enums ############################
 
 class Command:
@@ -73,7 +76,7 @@ currentState = State.Autonomous
 currentZone = Zone.All
 movebaseStatus = GoalStatusArray()
 lastPrintMsg = ""
-lastPrintDelay = 1
+lastPrintDelay = 2
 lastOpenMvMsg = tuple()
 lastGoalMsg = MoveBaseActionGoal()
 lastGoalId = 0
@@ -97,7 +100,7 @@ def Print(msg):
 	global lastPrintMsg
 	global lastPrintMsgUpdate
 
-	if(time.time() - lastPrintMsgUpdate) >= lastPrintDelay or lastPrintMsgUpdate == 0:
+	if(time.time() - lastPrintMsgUpdate) >= lastPrintDelay or lastPrintMsgUpdate == 0 or lastPrintMsg != msg:
 		print(msg)
 		lastPrintMsg = msg
 		lastPrintMsgUpdate = time.time()
